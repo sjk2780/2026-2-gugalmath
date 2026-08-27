@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>수업 활동</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+<!-- BUILD:CONFIG_START -->
+<script>
+  const CONFIG = {
+    title: "5단원 · 삼각형의 성질",
+    folder: "unit5_sample",
+    explore: "isosceles",
+  };
+  const PROBLEMS = [
+    { label: "문제 1", text: "다음 그림에서 x의 값을 구하시오.", math: "", image: "" },
+  ];
+</script>
+<!-- BUILD:CONFIG_END -->
+
+<style>
+  :root{
+    --bg:#FAFAF8; --ink:#1A1A1A; --sub:#6B7280; --line:#E5E7EB;
+    --blue:#2563EB; --red:#DC2626; --ok:#059669; --okbg:#ECFDF5;
+    --panel:#FFFFFF; --accent:#0D9488;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  input:focus::placeholder{ color:transparent; }
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Pretendard',system-ui,sans-serif; line-height:1.6;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:1100px; margin:0 auto; padding:20px 18px 60px;}
+  header.top{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;}
+  header.top h1{font-size:19px; margin:0; font-weight:800;}
+  .status{display:flex; align-items:center; gap:6px; font-size:13px; color:var(--sub);}
+  .dot{width:8px; height:8px; border-radius:50%; background:#9CA3AF;}
+  .dot.on{background:var(--ok);}
+
+  /* 탭 */
+  .tabs{display:flex; gap:6px; border-bottom:1px solid var(--line); margin-bottom:18px;}
+  .tab{padding:10px 18px; font-size:15px; font-weight:600; color:var(--sub); background:none; border:none; border-bottom:2px solid transparent; cursor:pointer; font-family:inherit;}
+  .tab.active{color:var(--ink); border-bottom-color:var(--ink);}
+
+  /* 문제 선택 바 */
+  .pbar{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;}
+  .pbar button{padding:8px 16px; font-size:14px; font-weight:600; color:var(--sub); background:var(--panel); border:1px solid var(--line); border-radius:20px; cursor:pointer; font-family:inherit;}
+  .pbar button.active{color:var(--ink); border-color:var(--ink); font-weight:700;}
+
+  /* 문제 카드 */
+  .prompt{background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--ink); border-radius:10px; padding:16px 18px; margin-bottom:14px;}
+  .prompt .plabel{font-size:12.5px; font-weight:700; color:var(--sub); margin-bottom:6px;}
+  .prompt .ptext{font-size:16px; white-space:pre-wrap;}
+  .prompt .pmath{margin-top:10px;}
+  .prompt .pmath .katex{font-size:1.3em;}
+
+  /* 캔버스 공통 */
+  .sketch-wrap{position:relative; width:100%; aspect-ratio:4/3; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; touch-action:none;}
+  .sketch-wrap canvas{width:100%; height:100%; display:block;}
+  .sketch-tools{position:absolute; left:50%; bottom:12px; transform:translateX(-50%); display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.96); border:1px solid var(--line); border-radius:24px; padding:7px 14px; box-shadow:0 4px 12px rgba(0,0,0,.1); flex-wrap:wrap; justify-content:center; max-width:94%;}
+  .sk-colors{display:flex; gap:8px;}
+  .sk-dot{width:22px; height:22px; border-radius:50%; cursor:pointer; border:2px solid #fff; box-shadow:0 0 0 1px var(--line);}
+  .sk-dot.active{box-shadow:0 0 0 2px var(--ink);}
+  .sk-btn{font-family:inherit; font-size:14px; font-weight:600; color:var(--sub); background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:6px; white-space:nowrap;}
+  .sk-btn.active{color:var(--red); background:#FEF2F2;}
+
+  /* 탐구 패널 */
+  .exhead{background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--accent); border-radius:10px; padding:14px 18px; margin-bottom:14px;}
+  .exhead .extitle{font-size:16px; font-weight:700; margin-bottom:4px;}
+  .exhead .exsub{font-size:14px; color:var(--sub); white-space:pre-wrap;}
+  .extools{display:flex; gap:8px; flex-wrap:wrap; margin:12px 0;}
+  .chip{padding:8px 14px; font-size:14px; font-weight:600; color:var(--sub); background:var(--panel); border:1px solid var(--line); border-radius:20px; cursor:pointer; font-family:inherit;}
+  .chip.on{color:#fff; background:var(--accent); border-color:var(--accent);}
+  .chip.plain.on{color:var(--ink); background:#F0FDFA; border-color:var(--accent);}
+  .readout{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;}
+  .rd{background:var(--panel); border:1px solid var(--line); border-radius:9px; padding:9px 14px; font-size:14px; min-width:104px;}
+  .rd .k{font-size:11.5px; color:var(--sub); font-weight:700; display:block; letter-spacing:.02em;}
+  .rd .v{font-size:17px; font-weight:700; font-variant-numeric:tabular-nums;}
+  .rd.eq{border-color:var(--accent); background:#F0FDFA;}
+  .exnote{margin-top:12px; font-size:14px; color:var(--ok); background:var(--okbg); border:1px solid #A7F3D0; border-radius:9px; padding:10px 14px; display:none;}
+  .exnote.show{display:block;}
+
+  /* 제출 영역 */
+  .submit-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:16px;}
+  .submit-row select, .submit-row input{padding:11px 12px; border:1px solid var(--line); border-radius:8px; font-family:inherit; font-size:15px; outline:none;}
+  .submit-row select:focus, .submit-row input:focus{border-color:var(--ink);}
+  .btn-primary{margin-left:auto; padding:12px 26px; font-size:15px; font-weight:700; color:#fff; background:var(--ink); border:none; border-radius:9px; cursor:pointer; font-family:inherit;}
+  .btn-primary:disabled{opacity:.5;}
+  .btn-ghost{padding:11px 16px; font-size:14px; font-weight:600; color:var(--sub); background:none; border:1px solid var(--line); border-radius:8px; cursor:pointer; font-family:inherit;}
+
+  /* 내 제출 */
+  .records{margin-top:28px;}
+  .records h3{font-size:15px; margin:0 0 12px;}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:14px;}
+  .rec{background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden;}
+  .rec .rtop{display:flex; justify-content:space-between; align-items:center; padding:9px 12px; font-size:13px; font-weight:600;}
+  .rec img{width:100%; display:block; border-top:1px solid var(--line); border-bottom:1px solid var(--line); cursor:pointer; background:#fff;}
+  .rec .rbot{padding:8px 12px; font-size:12.5px; color:var(--sub);}
+  .tag{font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px;}
+  .tag.ok{color:var(--ok); background:var(--okbg);}
+  .del{font-size:12px; color:var(--red); background:none; border:none; cursor:pointer; font-family:inherit;}
+
+  /* 교사 대시보드 */
+  .dash-head{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px;}
+  .dash-head h2{font-size:18px; margin:0;}
+  .filters{display:flex; gap:8px; flex-wrap:wrap;}
+  .filters select{padding:8px 11px; font-size:14px; border:1px solid var(--line); border-radius:8px; font-family:inherit; background:#fff;}
+  .dash-section{margin-bottom:28px;}
+  .dash-section-title{font-size:16px; font-weight:700; margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid var(--line); display:flex; align-items:center; gap:10px;}
+  .dash-section-title .cnt{font-size:13px; font-weight:600; color:var(--sub);}
+  .qr-thumb{position:absolute; top:16px; right:16px; cursor:pointer; text-align:center;}
+  .qr-thumb .cap{font-size:10px; color:var(--sub); margin-top:2px;}
+
+  /* 모달 */
+  .modal{position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:100; padding:20px;}
+  .modal.open{display:flex;}
+  .modal .box{background:#fff; border-radius:12px; padding:16px; max-width:90vw; max-height:90vh; overflow:auto;}
+  .modal img{max-width:100%; max-height:76vh; display:block; border-radius:8px;}
+  .modal .minfo{font-size:14px; font-weight:600; margin-bottom:10px;}
+  .modal .mclose{margin-top:12px; text-align:center;}
+
+  @media(max-width:600px){
+    .prompt .ptext{font-size:15px;}
+    .btn-primary{margin-left:0; width:100%;}
+    .submit-row{gap:8px;}
+    .sk-btn{font-size:13px; padding:4px 6px;}
+    .rd{min-width:92px; padding:8px 11px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1 id="pageTitle">수업 활동</h1>
+    <div class="status"><span class="dot" id="dot"></span><span id="statusTxt">연결 중</span></div>
+  </header>
+
+  <!-- 학생 탭 -->
+  <div class="tabs" id="studentTabs">
+    <button class="tab active" id="tabExplore" onclick="showView('explore')">탐구하기</button>
+    <button class="tab" id="tabSolve" onclick="showView('solve')">문제 풀기</button>
+  </div>
+
+  <!-- ===== 학생: 탐구하기 ===== -->
+  <div id="viewExplore">
+    <div class="exhead">
+      <div class="extitle" id="exTitle"></div>
+      <div class="exsub" id="exSub"></div>
+    </div>
+
+    <div class="extools" id="exTools"></div>
+
+    <div class="sketch-wrap" id="exwrap">
+      <canvas id="ex"></canvas>
+    </div>
+
+    <div class="readout" id="exReadout"></div>
+    <div class="exnote" id="exNote"></div>
+
+    <div class="submit-row">
+      <select id="exClass">
+        <option value="">반 선택</option>
+        <option value="1">1반</option><option value="2">2반</option><option value="3">3반</option>
+        <option value="4">4반</option><option value="5">5반</option><option value="6">6반</option>
+        <option value="7">7반</option><option value="8">8반</option>
+      </select>
+      <input type="text" id="exName" placeholder="이름" style="width:120px;">
+      <button class="btn-ghost" onclick="exReset()">처음으로</button>
+      <button class="btn-primary" id="exSubmitBtn" onclick="submitExplore()">탐구 화면 제출</button>
+    </div>
+  </div>
+
+  <!-- ===== 학생: 문제 풀기 ===== -->
+  <div id="viewSolve" style="display:none;">
+    <div class="pbar" id="pbar"></div>
+
+    <div class="prompt" id="prompt">
+      <div class="plabel" id="pLabel"></div>
+      <div class="ptext" id="pText"></div>
+      <div class="pmath" id="pMath"></div>
+    </div>
+
+    <div class="sketch-wrap" id="skwrap">
+      <canvas id="cv"></canvas>
+      <div class="sketch-tools">
+        <div class="sk-colors">
+          <div class="sk-dot active" style="background:#1A1A1A" onclick="setPen('#1A1A1A',this)"></div>
+          <div class="sk-dot" style="background:#DC2626" onclick="setPen('#DC2626',this)"></div>
+          <div class="sk-dot" style="background:#2563EB" onclick="setPen('#2563EB',this)"></div>
+        </div>
+        <button class="sk-btn" id="lineBtn" onclick="toggleLineMode()">직선</button>
+        <button class="sk-btn" id="eraserBtn" onclick="toggleEraser()">지우개</button>
+        <button class="sk-btn" onclick="undoStroke()">되돌리기</button>
+        <button class="sk-btn" onclick="clearSketch()">전체 지우기</button>
+      </div>
+    </div>
+
+    <div class="submit-row">
+      <select id="stuClass">
+        <option value="">반 선택</option>
+        <option value="1">1반</option><option value="2">2반</option><option value="3">3반</option>
+        <option value="4">4반</option><option value="5">5반</option><option value="6">6반</option>
+        <option value="7">7반</option><option value="8">8반</option>
+      </select>
+      <input type="text" id="stuName" placeholder="이름" style="width:120px;">
+      <button class="btn-primary" id="submitBtn" onclick="submitAnswer()">풀이 제출하기</button>
+    </div>
+
+    <div class="records" id="myRecords" style="display:none;">
+      <h3>내가 제출한 풀이</h3>
+      <div class="grid" id="myGrid"></div>
+    </div>
+  </div>
+
+  <!-- ===== 교사: 대시보드 ===== -->
+  <div id="viewDash" style="display:none; position:relative;">
+    <div class="qr-thumb" id="qrThumb" onclick="openModal('qrModal')" style="display:none;">
+      <div id="qrSmall"></div><div class="cap">QR 크게</div>
+    </div>
+    <div class="dash-head">
+      <h2>전체 제출 현황</h2>
+      <div class="filters">
+        <select id="fClass" onchange="renderDash()">
+          <option value="all">모든 반</option>
+          <option value="1">1반</option><option value="2">2반</option><option value="3">3반</option>
+          <option value="4">4반</option><option value="5">5반</option><option value="6">6반</option>
+          <option value="7">7반</option><option value="8">8반</option>
+        </select>
+        <select id="fProblem" onchange="renderDash()"><option value="all">모든 문제</option></select>
+        <button class="btn-ghost" onclick="refreshDash()">↻ 새로고침</button>
+      </div>
+    </div>
+    <div id="dashGrid"></div>
+  </div>
+</div>
+
+<!-- 확대 모달 -->
+<div class="modal" id="inspectModal" onclick="closeModal('inspectModal')">
+  <div class="box" onclick="event.stopPropagation()">
+    <div class="minfo" id="inspectInfo"></div>
+    <img id="inspectImg" src="" alt="풀이">
+    <div class="mclose"><button class="btn-ghost" onclick="closeModal('inspectModal')">닫기</button></div>
+  </div>
+</div>
+<!-- QR 모달 -->
+<div class="modal" id="qrModal" onclick="closeModal('qrModal')">
+  <div class="box" onclick="event.stopPropagation()" style="text-align:center;">
+    <div class="minfo">학생 접속용 QR</div>
+    <div id="qrBig"></div>
+    <div class="mclose"><button class="btn-ghost" onclick="closeModal('qrModal')">닫기</button></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  const isTeacher = new URLSearchParams(location.search).get('teacher')==='true';
+  const DB_PATH = 'classroom/' + CONFIG.folder;
+  const EXPLORE_IDX = -1;               // 탐구 제출을 구분하는 pIdx
+  const CANVAS_CM  = 12;                // 탐구 캔버스 가로를 12cm로 간주(화면 크기와 무관하게 일정)
+
+  let database=null;
+  try{
+    if(typeof firebase!=='undefined'){
+      firebase.initializeApp({ databaseURL:"https://gugal-math-default-rtdb.firebaseio.com/" });
+      database=firebase.database();
+    }
+  }catch(e){ console.warn('Firebase 미연결', e); }
+
+  function tex(t, inline){
+    if(!t) return '';
+    if(typeof katex!=='undefined'){
+      try{ return katex.renderToString(t,{throwOnError:false, displayMode:!inline}); }catch(e){ return t; }
+    }
+    return t;
+  }
+
+  /* ══════════════ 기하 계산 도우미 ══════════════ */
+  function dist(p,q){ return Math.hypot(p.x-q.x, p.y-q.y); }
+  function mid(p,q){ return {x:(p.x+q.x)/2, y:(p.y+q.y)/2}; }
+  function sub(p,q){ return {x:p.x-q.x, y:p.y-q.y}; }
+  function add(p,q){ return {x:p.x+q.x, y:p.y+q.y}; }
+  function mul(v,s){ return {x:v.x*s, y:v.y*s}; }
+  function norm(v){ const L=Math.hypot(v.x,v.y)||1; return {x:v.x/L, y:v.y/L}; }
+  function perp(v){ return {x:-v.y, y:v.x}; }
+  function cm(px){ const s=(exW||600)/CANVAS_CM; return (px/s).toFixed(1); }
+
+  // 점 P에서 두 점 X, Y를 바라본 각(도)
+  function angleAt(P,X,Y){
+    const a1=Math.atan2(X.y-P.y, X.x-P.x), a2=Math.atan2(Y.y-P.y, Y.x-P.x);
+    let t=Math.abs(a1-a2);
+    if(t>Math.PI) t=2*Math.PI-t;
+    return t*180/Math.PI;
+  }
+  // 외심
+  function circumcenter(A,B,C){
+    const d=2*(A.x*(B.y-C.y)+B.x*(C.y-A.y)+C.x*(A.y-B.y));
+    if(Math.abs(d)<1e-9) return null;
+    const A2=A.x*A.x+A.y*A.y, B2=B.x*B.x+B.y*B.y, C2=C.x*C.x+C.y*C.y;
+    return {
+      x:(A2*(B.y-C.y)+B2*(C.y-A.y)+C2*(A.y-B.y))/d,
+      y:(A2*(C.x-B.x)+B2*(A.x-C.x)+C2*(B.x-A.x))/d
+    };
+  }
+  // 내심
+  function incenter(A,B,C){
+    const a=dist(B,C), b=dist(C,A), c=dist(A,B), s=a+b+c;
+    if(s<1e-9) return null;
+    return {x:(a*A.x+b*B.x+c*C.x)/s, y:(a*A.y+b*B.y+c*C.y)/s};
+  }
+  // 점 P에서 직선 XY에 내린 수선의 발
+  function footPerp(P,X,Y){
+    const v=sub(Y,X), L2=v.x*v.x+v.y*v.y;
+    if(L2<1e-9) return {x:X.x,y:X.y};
+    const t=((P.x-X.x)*v.x+(P.y-X.y)*v.y)/L2;
+    return {x:X.x+t*v.x, y:X.y+t*v.y};
+  }
+  // 삼각형이 너무 납작한가(거의 일직선) — 탐구가 깨지지 않도록 막는 용도
+  function tooFlat(A,B,C){
+    if(!A||!B||!C) return true;
+    const m=Math.max(angleAt(A,B,C), angleAt(B,A,C), angleAt(C,A,B));
+    return m>165;
+  }
+  // 점 P가 삼각형 ABC 내부에 있는가
+  function inTriangle(P,A,B,C){
+    const s=(p,q,r)=>(p.x-r.x)*(q.y-r.y)-(q.x-r.x)*(p.y-r.y);
+    const d1=s(P,A,B), d2=s(P,B,C), d3=s(P,C,A);
+    const neg=(d1<0)||(d2<0)||(d3<0), pos=(d1>0)||(d2>0)||(d3>0);
+    return !(neg&&pos);
+  }
+  // 삼각형의 종류 + 외심/내심 위치 설명
+  function triKind(A,B,C){
+    const m=Math.max(angleAt(A,B,C), angleAt(B,A,C), angleAt(C,A,B));
+    if(Math.abs(m-90)<1.2) return {kind:'직각삼각형', pos:'빗변의 중점'};
+    if(m>90) return {kind:'둔각삼각형', pos:'삼각형의 외부'};
+    return {kind:'예각삼각형', pos:'삼각형의 내부'};
+  }
+  // 두 직선(점+방향)의 교점
+  function lineX(P,dP,Q,dQ){
+    const den=dP.x*dQ.y-dP.y*dQ.x;
+    if(Math.abs(den)<1e-9) return null;
+    const t=((Q.x-P.x)*dQ.y-(Q.y-P.y)*dQ.x)/den;
+    return {x:P.x+t*dP.x, y:P.y+t*dP.y};
+  }
+
+  /* ══════════════ 탐구 모드 정의 ══════════════ */
+  const EX_DEFS = {
+    isosceles: {
+      title: '이등변삼각형을 살펴봅시다',
+      sub: '꼭짓점 A, B, C를 손가락으로 끌어 삼각형을 바꿔 보세요.',
+      tools: [
+        {k:'lock',  label:'AB=AC 고정'},
+        {k:'bisec', label:'꼭지각 A의 이등분선'}
+      ]
+    },
+    congruence: {
+      title: '두 직각삼각형을 포개 봅시다',
+      sub: '오른쪽 삼각형을 끌고, 회전·뒤집기로 왼쪽 삼각형에 포개어 보세요.',
+      tools: [
+        {k:'rha', label:'빗변 + 한 예각', group:'preset'},
+        {k:'rhs', label:'빗변 + 다른 한 변', group:'preset'},
+        {k:'rotL', label:'↺ 회전', action:true},
+        {k:'rotR', label:'↻ 회전', action:true},
+        {k:'flip', label:'뒤집기', action:true}
+      ]
+    },
+    circumcenter: {
+      title: '세 변의 수직이등분선을 그어 봅시다',
+      sub: '아래 버튼으로 수직이등분선을 하나씩 그어 보고, 꼭짓점을 끌어 삼각형을 바꿔 보세요.',
+      tools: [
+        {k:'pa', label:'변 BC의 수직이등분선'},
+        {k:'pb', label:'변 CA의 수직이등분선'},
+        {k:'pc', label:'변 AB의 수직이등분선'},
+        {k:'circle', label:'점 O를 중심으로 하는 원'}
+      ]
+    },
+    incenter: {
+      title: '세 내각의 이등분선을 그어 봅시다',
+      sub: '아래 버튼으로 각의 이등분선을 하나씩 그어 보고, 꼭짓점을 끌어 삼각형을 바꿔 보세요.',
+      tools: [
+        {k:'ba', label:'∠A의 이등분선'},
+        {k:'bb', label:'∠B의 이등분선'},
+        {k:'bc', label:'∠C의 이등분선'},
+        {k:'circle', label:'점 I를 중심으로 하는 원'}
+      ]
+    }
+  };
+
+  const exMode = CONFIG.explore;
+  const exDef  = EX_DEFS[exMode] || EX_DEFS.isosceles;
+
+  let ex = {
+    A:null, B:null, C:null,
+    drag:null,
+    opts:{},
+    preset:'rha',
+    t2:{dx:0, dy:0, rot:0, flip:1},   // 5.2용 두 번째 삼각형 변환
+    lockLen:null
+  };
+
+  let exCv, exCtx, exWrap, exW=0, exH=0;
+
+  function exInitPoints(){
+    ex.A={x:exW*0.50, y:exH*0.16};
+    ex.B={x:exW*0.22, y:exH*0.80};
+    ex.C={x:exW*0.78, y:exH*0.80};
+    ex.lockLen=dist(ex.A,ex.B);
+    ex.t2=exT2Start();
+  }
+  // 두 번째 삼각형의 시작 위치(E가 놓이는 자리) — 화면 안에 완전히 들어오도록
+  function exT2Start(){ return {dx:exW*0.56, dy:exH*0.72, rot:0, flip:1}; }
+  function exReset(){ exInitPoints(); exDraw(); exUpdate(); }
+
+  function exResize(){
+    if(!exCv||!exWrap) return;
+    const w=exWrap.clientWidth, h=exWrap.clientHeight;
+    if(!w||!h) return;
+    if(ex.A && exW===w && exH===h){ exDraw(); exUpdate(); return; }
+    const first = !exW || !exH || !ex.A;
+    const rx = first?1:(w/exW), ry = first?1:(h/exH);
+    exCv.width=w; exCv.height=h; exW=w; exH=h;
+    if(first){ exInitPoints(); }
+    else{
+      ['A','B','C'].forEach(k=>{ if(ex[k]){ ex[k].x*=rx; ex[k].y*=ry; } });
+      ex.lockLen=dist(ex.A,ex.B);
+    }
+    exDraw(); exUpdate();
+  }
+
+  function exRenderTools(){
+    const box=document.getElementById('exTools'); box.innerHTML='';
+    exDef.tools.forEach(t=>{
+      const b=document.createElement('button');
+      b.className='chip'+(t.action?' plain':'');
+      b.id='chip_'+t.k;
+      b.textContent=t.label;
+      b.onclick=()=>exToolClick(t);
+      box.appendChild(b);
+    });
+    exSyncChips();
+  }
+  function exSyncChips(){
+    exDef.tools.forEach(t=>{
+      const b=document.getElementById('chip_'+t.k); if(!b) return;
+      if(t.group==='preset') b.classList.toggle('on', ex.preset===t.k);
+      else if(!t.action)     b.classList.toggle('on', !!ex.opts[t.k]);
+    });
+  }
+  function exToolClick(t){
+    if(t.group==='preset'){ ex.preset=t.k; ex.t2=exT2Start(); }
+    else if(t.action){
+      if(t.k==='rotL') ex.t2.rot-=15;
+      if(t.k==='rotR') ex.t2.rot+=15;
+      if(t.k==='flip') ex.t2.flip*=-1;
+    }
+    else{
+      ex.opts[t.k]=!ex.opts[t.k];
+      if(t.k==='lock' && ex.opts.lock){ ex.lockLen=dist(ex.A,ex.B); exApplyLock('C'); }
+    }
+    exSyncChips(); exDraw(); exUpdate();
+  }
+
+  // ★ 표시 정밀도 때문에 "변은 같은데 밑각이 다르다"고 보이는 것을 막는다.
+  //   길이는 0.1cm(≈9px) 단위로 반올림돼 표시되므로, 그 안쪽으로 들어오면
+  //   아예 정확히 AB=AC로 붙여 버린다. → 같아 보이면 실제로도 같다.
+  function exIsoTol(){ return 0.1*((exW||600)/CANVAS_CM); }
+  function exSnapIso(which){
+    const {A,B,C}=ex;
+    if(Math.abs(dist(A,B)-dist(A,C)) >= exIsoTol()) return;
+    if(which==='C')      ex.C=add(A, mul(norm(sub(C,A)), dist(A,B)));
+    else if(which==='B') ex.B=add(A, mul(norm(sub(B,A)), dist(A,C)));
+    else {  // A를 끄는 경우: BC의 수직이등분선 위로 A를 올린다
+      const M=mid(B,C), u=norm(perp(sub(C,B)));
+      const t=(A.x-M.x)*u.x+(A.y-M.y)*u.y;
+      ex.A=add(M, mul(u,t));
+    }
+  }
+  function exIsIso(){ return Math.abs(dist(ex.A,ex.B)-dist(ex.A,ex.C)) < 0.5; }
+
+  // AB=AC 고정: 지정한 점을 A로부터 lockLen 거리로 이동
+  function exApplyLock(which){
+    if(!ex.opts.lock) return;
+    if(which==='C'){ ex.C=add(ex.A, mul(norm(sub(ex.C,ex.A)), ex.lockLen)); }
+    else if(which==='B'){ ex.B=add(ex.A, mul(norm(sub(ex.B,ex.A)), ex.lockLen)); }
+    else { // A를 옮긴 경우: B, C 둘 다 거리 유지
+      ex.B=add(ex.A, mul(norm(sub(ex.B,ex.A)), ex.lockLen));
+      ex.C=add(ex.A, mul(norm(sub(ex.C,ex.A)), ex.lockLen));
+    }
+  }
+
+  /* ── 그리기 ── */
+  function exClear(){
+    exCtx.clearRect(0,0,exW,exH);
+    exCtx.fillStyle='#fff'; exCtx.fillRect(0,0,exW,exH);
+  }
+  function exSeg(p,q,color,width,dash){
+    exCtx.save();
+    exCtx.strokeStyle=color; exCtx.lineWidth=width||2; exCtx.lineCap='round';
+    if(dash) exCtx.setLineDash(dash);
+    exCtx.beginPath(); exCtx.moveTo(p.x,p.y); exCtx.lineTo(q.x,q.y); exCtx.stroke();
+    exCtx.restore();
+  }
+  function exDot(p,color,r){
+    exCtx.save(); exCtx.fillStyle=color||'#1A1A1A';
+    exCtx.beginPath(); exCtx.arc(p.x,p.y,r||4,0,Math.PI*2); exCtx.fill(); exCtx.restore();
+  }
+  function exHandle(p,label){
+    exCtx.save();
+    exCtx.fillStyle='#fff'; exCtx.strokeStyle='#1A1A1A'; exCtx.lineWidth=2.5;
+    exCtx.beginPath(); exCtx.arc(p.x,p.y,9,0,Math.PI*2); exCtx.fill(); exCtx.stroke();
+    exCtx.fillStyle='#1A1A1A'; exCtx.font='700 16px Pretendard, sans-serif';
+    exCtx.textAlign='center'; exCtx.textBaseline='middle';
+    exCtx.fillText(label, p.x, p.y-22);
+    exCtx.restore();
+  }
+  function exLabel(p,text,color,dx,dy){
+    exCtx.save();
+    exCtx.fillStyle=color||'#1A1A1A'; exCtx.font='600 14px Pretendard, sans-serif';
+    exCtx.textAlign='center'; exCtx.textBaseline='middle';
+    exCtx.fillText(text, p.x+(dx||0), p.y+(dy||0));
+    exCtx.restore();
+  }
+  // 직선을 캔버스 밖까지 길게
+  function exLongLine(P,dir,color,width,dash){
+    const L=Math.max(exW,exH)*2, u=norm(dir);
+    exSeg({x:P.x-u.x*L,y:P.y-u.y*L},{x:P.x+u.x*L,y:P.y+u.y*L},color,width,dash);
+  }
+  function exCircle(O,r,color){
+    exCtx.save(); exCtx.strokeStyle=color; exCtx.lineWidth=2;
+    exCtx.beginPath(); exCtx.arc(O.x,O.y,r,0,Math.PI*2); exCtx.stroke(); exCtx.restore();
+  }
+  // 직각 표시
+  function exRightMark(P,u,v,size){
+    const s=size||11, a=add(P,mul(norm(u),s)), b=add(P,mul(norm(v),s));
+    const c=add(a, mul(norm(v),s));
+    exSeg(a,c,'#DC2626',1.6); exSeg(c,b,'#DC2626',1.6);
+  }
+  // 변에 같음 표시(빗금)
+  function exTick(p,q,n,color){
+    const m=mid(p,q), u=norm(sub(q,p)), w=perp(u);
+    for(let i=0;i<n;i++){
+      const off=(i-(n-1)/2)*5;
+      const c=add(m, mul(u,off));
+      exSeg(add(c,mul(w,6)), add(c,mul(w,-6)), color||'#DC2626', 2);
+    }
+  }
+
+  function exDraw(){
+    if(!exCtx) return;
+    exClear();
+    if(exMode==='congruence'){ exDrawCongruence(); return; }
+    const {A,B,C}=ex;
+    if(!A) return;
+
+    // 삼각형
+    exSeg(A,B,'#1A1A1A',2.5); exSeg(B,C,'#1A1A1A',2.5); exSeg(C,A,'#1A1A1A',2.5);
+
+    if(exMode==='isosceles'){
+      if(ex.opts.lock || exIsIso()){ exTick(A,B,1); exTick(A,C,1); }
+      if(ex.opts.bisec){
+        const dir=norm(add(norm(sub(B,A)), norm(sub(C,A))));
+        const D=lineX(A,dir,B,sub(C,B));
+        if(D){
+          exSeg(A,D,'#0D9488',2.2);
+          exDot(D,'#0D9488',4); exLabel(D,'D','#0D9488',0,20);
+          exRightMark(D, sub(A,D), sub(C,D));
+          exTick(B,D,2,'#0D9488'); exTick(D,C,2,'#0D9488');
+        }
+      }
+    }
+
+    if(exMode==='circumcenter'){
+      const O=circumcenter(A,B,C);
+      const pbs=[
+        {on:ex.opts.pa, p:mid(B,C), d:perp(sub(C,B)), s:[B,C]},
+        {on:ex.opts.pb, p:mid(C,A), d:perp(sub(A,C)), s:[C,A]},
+        {on:ex.opts.pc, p:mid(A,B), d:perp(sub(B,A)), s:[A,B]}
+      ];
+      pbs.forEach(pb=>{
+        if(!pb.on) return;
+        exLongLine(pb.p, pb.d, '#0D9488', 2, [7,5]);
+        exDot(pb.p,'#0D9488',3.5);
+        exTick(pb.s[0],pb.p,1,'#0D9488'); exTick(pb.p,pb.s[1],1,'#0D9488');
+        exRightMark(pb.p, norm(pb.d), norm(sub(pb.s[1],pb.s[0])), 9);
+      });
+      const shown=pbs.filter(p=>p.on).length;
+      if(O && shown>=2){
+        if(ex.opts.circle) exCircle(O, dist(O,A), '#2563EB');
+        exDot(O,'#DC2626',5.5); exLabel(O,'O','#DC2626',14,-12);
+        if(ex.opts.circle){
+          exSeg(O,A,'#2563EB',1.6,[4,4]); exSeg(O,B,'#2563EB',1.6,[4,4]); exSeg(O,C,'#2563EB',1.6,[4,4]);
+        }
+      }
+    }
+
+    if(exMode==='incenter'){
+      const I=incenter(A,B,C);
+      const bas=[
+        {on:ex.opts.ba, V:A, P:B, Q:C},
+        {on:ex.opts.bb, V:B, P:C, Q:A},
+        {on:ex.opts.bc, V:C, P:A, Q:B}
+      ];
+      bas.forEach(b=>{
+        if(!b.on) return;
+        const dir=norm(add(norm(sub(b.P,b.V)), norm(sub(b.Q,b.V))));
+        const F=lineX(b.V,dir,b.P,sub(b.Q,b.P));
+        if(F) exSeg(b.V,F,'#0D9488',2.2,[7,5]);
+      });
+      const shown=bas.filter(b=>b.on).length;
+      if(I && shown>=2){
+        exDot(I,'#DC2626',5.5); exLabel(I,'I','#DC2626',14,-12);
+        if(ex.opts.circle){
+          const D=footPerp(I,A,B), E=footPerp(I,B,C), F=footPerp(I,C,A);
+          exCircle(I, dist(I,E), '#2563EB');
+          [[D,A,B],[E,B,C],[F,C,A]].forEach(([P,X,Y])=>{
+            exSeg(I,P,'#2563EB',1.6,[4,4]); exDot(P,'#2563EB',3.5);
+            exRightMark(P, sub(I,P), sub(Y,X), 9);
+          });
+          exLabel(D,'D','#2563EB',-14,-6); exLabel(E,'E','#2563EB',0,18); exLabel(F,'F','#2563EB',14,-6);
+        }
+      }
+    }
+
+    exHandle(A,'A'); exHandle(B,'B'); exHandle(C,'C');
+  }
+
+  /* ── 5.2 두 직각삼각형 포개기 ── */
+  function exTri1(){
+    // 왼쪽 고정 직각삼각형 (∠B=90°)
+    const s=Math.min(exW,exH);
+    const bx=exW*0.20, by=exH*0.72;
+    const w=s*0.30, h=s*0.42;
+    return { B:{x:bx,y:by}, C:{x:bx+w,y:by}, A:{x:bx,y:by-h} };
+  }
+  function exTri2Base(){
+    // 조건에 따라 합동인 짝 (RHA: 빗변+예각 / RHS: 빗변+다른 한 변)
+    const t=exTri1();
+    return { E:{x:0,y:0}, F:{x:dist(t.B,t.C), y:0}, D:{x:0, y:-dist(t.A,t.B)} };
+  }
+  function exTri2Pts(){
+    const b=exTri2Base(), th=ex.t2.rot*Math.PI/180;
+    const cos=Math.cos(th), sin=Math.sin(th);
+    const tr=p=>{
+      const x=p.x*ex.t2.flip, y=p.y;
+      return { x: x*cos - y*sin + ex.t2.dx, y: x*sin + y*cos + ex.t2.dy };
+    };
+    return { D:tr(b.D), E:tr(b.E), F:tr(b.F) };
+  }
+  function exDrawCongruence(){
+    const t=exTri1(), u=exTri2Pts();
+    // 삼각형 1
+    exSeg(t.A,t.B,'#1A1A1A',2.5); exSeg(t.B,t.C,'#1A1A1A',2.5); exSeg(t.C,t.A,'#1A1A1A',2.5);
+    exRightMark(t.B, sub(t.A,t.B), sub(t.C,t.B));
+    exLabel(t.A,'A','#1A1A1A',-14,-8); exLabel(t.B,'B','#1A1A1A',-14,14); exLabel(t.C,'C','#1A1A1A',12,14);
+    exTick(t.A,t.C,2);
+    if(ex.preset==='rha'){
+      exLabel(mid(t.A,t.C),Math.round(angleAt(t.C,t.A,t.B))+'°','#DC2626',22,14);
+    } else {
+      exTick(t.B,t.C,1,'#2563EB');
+    }
+    // 삼각형 2 (움직임)
+    exSeg(u.D,u.E,'#0D9488',2.5); exSeg(u.E,u.F,'#0D9488',2.5); exSeg(u.F,u.D,'#0D9488',2.5);
+    exRightMark(u.E, sub(u.D,u.E), sub(u.F,u.E));
+    exLabel(u.D,'D','#0D9488',-14,-8); exLabel(u.E,'E','#0D9488',-14,14); exLabel(u.F,'F','#0D9488',12,14);
+    exTick(u.D,u.F,2,'#0D9488');
+    if(ex.preset==='rha'){
+      exLabel(mid(u.D,u.F),Math.round(angleAt(u.F,u.D,u.E))+'°','#DC2626',22,14);
+    } else {
+      exTick(u.E,u.F,1,'#2563EB');
+    }
+    exHandle(u.E,'');
+  }
+  function exCongruenceMatched(){
+    const t=exTri1(), u=exTri2Pts(), tol=14;
+    return dist(t.A,u.D)<tol && dist(t.B,u.E)<tol && dist(t.C,u.F)<tol;
+  }
+
+  /* ── 측정값 표시 ── */
+  function exUpdate(){
+    const box=document.getElementById('exReadout');
+    const note=document.getElementById('exNote');
+    if(!box) return;
+    const {A,B,C}=ex;
+    let items=[], msg='';
+
+    if(exMode==='congruence'){
+      const ok=exCongruenceMatched();
+      items=[{k:'조건', v: ex.preset==='rha' ? '빗변 + 한 예각' : '빗변 + 다른 한 변'}];
+      if(ok) msg='두 삼각형이 완전히 포개졌습니다. 즉, 두 직각삼각형은 서로 합동입니다.';
+    }
+    else if(A){
+      const angB=angleAt(B,A,C), angC=angleAt(C,A,B);
+      if(exMode==='isosceles'){
+        items=[
+          {k:'AB', v:cm(dist(A,B))+' cm'},
+          {k:'AC', v:cm(dist(A,C))+' cm', eq:Math.abs(dist(A,B)-dist(A,C))<0.5},
+          {k:'∠B', v:angB.toFixed(1)+'°'},
+          {k:'∠C', v:angC.toFixed(1)+'°', eq:Math.abs(angB-angC)<0.05}
+        ];
+        if(ex.opts.bisec){
+          const dir=norm(add(norm(sub(B,A)), norm(sub(C,A))));
+          const D=lineX(A,dir,B,sub(C,B));
+          if(D){
+            items.push({k:'BD', v:cm(dist(B,D))+' cm'});
+            items.push({k:'DC', v:cm(dist(D,C))+' cm', eq:Math.abs(dist(B,D)-dist(D,C))<0.5});
+            items.push({k:'∠ADB', v:angleAt(D,A,B).toFixed(1)+'°'});
+          }
+        }
+      }
+      else if(exMode==='circumcenter'){
+        const O=circumcenter(A,B,C);
+        const shown=['pa','pb','pc'].filter(k=>ex.opts[k]).length;
+        if(O && shown>=2){
+          items=[
+            {k:'OA', v:cm(dist(O,A))+' cm'},
+            {k:'OB', v:cm(dist(O,B))+' cm', eq:true},
+            {k:'OC', v:cm(dist(O,C))+' cm', eq:true}
+          ];
+          if(shown===3) msg='세 변의 수직이등분선이 한 점 O에서 만납니다.';
+        } else {
+          items=[{k:'안내', v:'수직이등분선을 2개 이상 그어 보세요'}];
+        }
+        const tk=triKind(A,B,C);
+        items.push({k:'삼각형', v:tk.kind});
+        if(O && shown>=2) items.push({k:'점 O의 위치', v:tk.pos});
+      }
+      else if(exMode==='incenter'){
+        const I=incenter(A,B,C);
+        const shown=['ba','bb','bc'].filter(k=>ex.opts[k]).length;
+        if(I && shown>=2){
+          const D=footPerp(I,A,B), E=footPerp(I,B,C), F=footPerp(I,C,A);
+          items=[
+            {k:'ID', v:cm(dist(I,D))+' cm'},
+            {k:'IE', v:cm(dist(I,E))+' cm', eq:true},
+            {k:'IF', v:cm(dist(I,F))+' cm', eq:true}
+          ];
+          if(shown===3) msg='세 내각의 이등분선이 한 점 I에서 만납니다.';
+        } else {
+          items=[{k:'안내', v:'각의 이등분선을 2개 이상 그어 보세요'}];
+        }
+      }
+    }
+
+    box.innerHTML='';
+    items.forEach(it=>{
+      const el=document.createElement('div');
+      el.className='rd'+(it.eq?' eq':'');
+      el.innerHTML='<span class="k">'+it.k+'</span><span class="v">'+it.v+'</span>';
+      box.appendChild(el);
+    });
+    note.textContent=msg;
+    note.classList.toggle('show', !!msg);
+  }
+
+  /* ── 탐구 캔버스 입력 ── */
+  function exPos(e){
+    const r=exCv.getBoundingClientRect();
+    const t=e.touches&&e.touches[0]?e.touches[0]:e;
+    return {x:t.clientX-r.left, y:t.clientY-r.top};
+  }
+  function exDown(e){
+    const p=exPos(e);
+    if(exMode==='congruence'){
+      const u=exTri2Pts();
+      if(dist(p,u.E)<34 || dist(p,u.D)<34 || dist(p,u.F)<34){
+        ex.drag={t2:true, ox:p.x-ex.t2.dx, oy:p.y-ex.t2.dy};
+      }
+      return;
+    }
+    let best=null, bd=1e9;
+    ['A','B','C'].forEach(k=>{ const d=dist(p,ex[k]); if(d<bd){ bd=d; best=k; } });
+    if(bd<30) ex.drag=best;
+  }
+  function exMove(e){
+    if(!ex.drag) return;
+    const p=exPos(e);
+    if(ex.drag.t2){ ex.t2.dx=p.x-ex.drag.ox; ex.t2.dy=p.y-ex.drag.oy; }
+    else{
+      const k=ex.drag;
+      const prev={A:{...ex.A}, B:{...ex.B}, C:{...ex.C}}, prevLen=ex.lockLen;
+      ex[k]={x:Math.max(24,Math.min(exW-24,p.x)), y:Math.max(30,Math.min(exH-24,p.y))};
+      if(ex.opts.lock){
+        if(k==='A') exApplyLock('A');
+        else if(k==='B'){ ex.lockLen=dist(ex.A,ex.B); exApplyLock('C'); }
+        else exApplyLock('C');
+      }
+      else if(exMode==='isosceles') exSnapIso(k);
+      // 거의 일직선이 되면 되돌린다(화면이 깨지는 것을 방지)
+      if(tooFlat(ex.A,ex.B,ex.C)){ ex.A=prev.A; ex.B=prev.B; ex.C=prev.C; ex.lockLen=prevLen; }
+    }
+    exDraw(); exUpdate();
+  }
+  function exUp(){ ex.drag=null; }
+
+  /* ══════════════ 문제 풀기 스케치북 ══════════════ */
+  let activeIdx=0;
+  let strokes=[], curStroke=null;
+  let penColor='#1A1A1A', eraserOn=false, lineMode=false, dragging=false;
+  let bgImg=null, bgReady=false;
+
+  let cv, ctx, skwrap;
+  // 학생의 필기만 담는 별도 레이어. 지우개는 이 레이어에서만 지우므로
+  // 배경(문제 그림)은 절대 지워지지 않는다.
+  let inkCv=null, inkCtx=null;
+  function ensureInk(w,h){
+    if(!inkCv){ inkCv=document.createElement('canvas'); inkCtx=inkCv.getContext('2d'); }
+    if(inkCv.width!==w || inkCv.height!==h){ inkCv.width=w; inkCv.height=h; }
+  }
+
+  function resize(){
+    if(!cv||!skwrap) return;
+    const w=skwrap.clientWidth, h=skwrap.clientHeight;
+    if(!w||!h) return;
+    if(cv.width===w && cv.height===h){ draw(); return; }
+    cv.width=w; cv.height=h; draw();
+  }
+
+  function draw(){
+    if(!ctx) return;
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+    // 문제 그림을 배경으로 (그 위에 바로 필기)
+    if(bgImg && bgReady && bgImg.width){
+      const maxW=cv.width*0.86, maxH=cv.height*0.62;
+      const s=Math.min(maxW/bgImg.width, maxH/bgImg.height, 1.6);
+      const w=bgImg.width*s, h=bgImg.height*s;
+      ctx.drawImage(bgImg, (cv.width-w)/2, cv.height*0.04, w, h);
+    }
+    // 필기는 별도 레이어에 그리고, 지우개는 그 레이어에서만 지운다
+    ensureInk(cv.width, cv.height);
+    inkCtx.clearRect(0,0,inkCv.width,inkCv.height);
+    inkCtx.lineCap='round'; inkCtx.lineJoin='round';
+    const all = curStroke ? strokes.concat([curStroke]) : strokes;
+    all.forEach(s=>{
+      if(!s.pts.length) return;
+      inkCtx.globalCompositeOperation = s.erase ? 'destination-out' : 'source-over';
+      inkCtx.strokeStyle = s.erase ? '#000' : s.color;
+      inkCtx.lineWidth = s.width;
+      inkCtx.beginPath(); inkCtx.moveTo(s.pts[0].x,s.pts[0].y);
+      for(let i=1;i<s.pts.length;i++) inkCtx.lineTo(s.pts[i].x,s.pts[i].y);
+      inkCtx.stroke();
+    });
+    inkCtx.globalCompositeOperation='source-over';
+    ctx.drawImage(inkCv,0,0);
+  }
+  function pos(e){
+    const r=cv.getBoundingClientRect();
+    const t=e.touches&&e.touches[0]?e.touches[0]:e;
+    return {x:t.clientX-r.left, y:t.clientY-r.top};
+  }
+  function startDraw(e){
+    dragging=true; const p=pos(e);
+    curStroke={color:penColor, width:eraserOn?22:2.5, erase:eraserOn, pts: lineMode?[p,p]:[p]};
+    draw();
+  }
+  function moveDraw(e){
+    if(!dragging||!curStroke) return;
+    const p=pos(e);
+    if(lineMode) curStroke.pts[1]=p; else curStroke.pts.push(p);
+    draw();
+  }
+  function endDraw(){
+    if(curStroke){ if(curStroke.pts.length) strokes.push(curStroke); curStroke=null; draw(); }
+    dragging=false;
+  }
+  function setPen(c,el){
+    penColor=c; eraserOn=false; lineMode=false;
+    document.querySelectorAll('.sk-dot').forEach(d=>d.classList.remove('active'));
+    if(el) el.classList.add('active');
+    document.getElementById('eraserBtn').classList.remove('active');
+    document.getElementById('lineBtn').classList.remove('active');
+  }
+  function toggleEraser(){
+    eraserOn=!eraserOn;
+    if(eraserOn){ lineMode=false; document.getElementById('lineBtn').classList.remove('active'); }
+    document.getElementById('eraserBtn').classList.toggle('active', eraserOn);
+  }
+  function toggleLineMode(){
+    lineMode=!lineMode;
+    if(lineMode){ eraserOn=false; document.getElementById('eraserBtn').classList.remove('active'); }
+    document.getElementById('lineBtn').classList.toggle('active', lineMode);
+  }
+  function undoStroke(){ if(strokes.length){ strokes.pop(); draw(); } }
+  function clearSketch(){
+    if(strokes.length && !confirm('필기한 내용을 모두 지울까요?')) return;
+    strokes=[]; curStroke=null; draw();
+  }
+
+  /* ── 문제 표시 ── */
+  function renderProblemBar(){
+    const bar=document.getElementById('pbar'); bar.innerHTML='';
+    PROBLEMS.forEach((p,i)=>{
+      const b=document.createElement('button');
+      b.textContent=p.label; b.id='pb_'+i;
+      b.onclick=()=>selectProblem(i);
+      bar.appendChild(b);
+    });
+    const fp=document.getElementById('fProblem');
+    const o0=document.createElement('option'); o0.value=EXPLORE_IDX; o0.textContent='탐구'; fp.appendChild(o0);
+    PROBLEMS.forEach((p,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=p.label; fp.appendChild(o); });
+  }
+  function selectProblem(i){
+    activeIdx=i;
+    document.querySelectorAll('#pbar button').forEach(b=>b.classList.remove('active'));
+    const btn=document.getElementById('pb_'+i); if(btn) btn.classList.add('active');
+    const p=PROBLEMS[i];
+    document.getElementById('pLabel').textContent=p.label;
+    document.getElementById('pText').textContent=p.text;
+    document.getElementById('pMath').innerHTML = p.math ? tex(p.math,false) : '';
+    strokes=[]; curStroke=null;
+    bgReady=false; bgImg=null;
+    if(p.image){
+      const im=new Image();
+      im.onload=()=>{ bgImg=im; bgReady=true; draw(); };
+      im.src=p.image;
+    }
+    draw();
+  }
+
+  /* ══════════════ 화면 전환 ══════════════ */
+  let currentView='explore';
+  function showView(v){
+    currentView=v;
+    document.getElementById('tabExplore').classList.toggle('active', v==='explore');
+    document.getElementById('tabSolve').classList.toggle('active', v==='solve');
+    document.getElementById('viewExplore').style.display = v==='explore'?'block':'none';
+    document.getElementById('viewSolve').style.display   = v==='solve'?'block':'none';
+    if(v==='explore') setTimeout(exResize,0);
+    if(v==='solve')   setTimeout(resize,0);
+  }
+
+  /* ══════════════ 제출 ══════════════ */
+  function myKeys(){ const k=localStorage.getItem('cls_'+CONFIG.folder); return k?JSON.parse(k):[]; }
+  function saveKey(k){ const a=myKeys(); if(!a.includes(k)){ a.push(k); localStorage.setItem('cls_'+CONFIG.folder, JSON.stringify(a)); } }
+
+  function sendSubmission(cls, name, pIdx, label, dataUrl, btn, okMsg){
+    const ref=database.ref(DB_PATH).push();
+    saveKey(ref.key);
+    ref.set({ class:cls, name:name, pIdx:pIdx, label:label, img:dataUrl, time:Date.now() })
+      .then(()=>{ alert(okMsg); btn.disabled=false; btn.textContent=btn.dataset.txt; refreshMyRecords(); })
+      .catch(()=>{ alert('전송에 실패했어요. 다시 시도해 주세요.'); btn.disabled=false; btn.textContent=btn.dataset.txt; });
+  }
+
+  function submitAnswer(){
+    if(!database){ alert('인터넷 연결이 필요해요.'); return; }
+    const cls=document.getElementById('stuClass').value;
+    const name=document.getElementById('stuName').value.trim();
+    if(!cls||!name){ alert('반과 이름을 입력해 주세요.'); return; }
+    if(!strokes.some(s=>!s.erase)){ alert('노트에 풀이를 적어 주세요.'); return; }
+    const btn=document.getElementById('submitBtn');
+    btn.dataset.txt='풀이 제출하기'; btn.disabled=true; btn.textContent='전송 중...';
+    sendSubmission(cls, name, activeIdx, PROBLEMS[activeIdx].label, cv.toDataURL('image/png'), btn,
+      '제출되었습니다! 아래 “내가 제출한 풀이”에서 확인할 수 있어요.');
+  }
+
+  function submitExplore(){
+    if(!database){ alert('인터넷 연결이 필요해요.'); return; }
+    const cls=document.getElementById('exClass').value;
+    const name=document.getElementById('exName').value.trim();
+    if(!cls||!name){ alert('반과 이름을 입력해 주세요.'); return; }
+    const btn=document.getElementById('exSubmitBtn');
+    btn.dataset.txt='탐구 화면 제출'; btn.disabled=true; btn.textContent='전송 중...';
+    sendSubmission(cls, name, EXPLORE_IDX, '탐구', exCv.toDataURL('image/png'), btn,
+      '탐구 화면이 제출되었습니다!');
+  }
+
+  function refreshMyRecords(){
+    if(!database||isTeacher) return;
+    database.ref(DB_PATH).once('value').then(snap=>{
+      const keys=myKeys(); const mine=[];
+      snap.forEach(c=>{ if(keys.includes(c.key)) mine.push({id:c.key, ...c.val()}); });
+      mine.sort((a,b)=>b.time-a.time);
+      renderMy(mine);
+    });
+  }
+
+  const recCache={};
+  function renderMy(data){
+    const wrap=document.getElementById('myRecords'), g=document.getElementById('myGrid');
+    wrap.style.display='block';
+    if(!data.length){ g.innerHTML='<p style="color:var(--sub); font-size:14px;">아직 제출한 풀이가 없어요.</p>'; return; }
+    g.innerHTML='';
+    data.forEach(d=>{
+      recCache[d.id]=d;
+      const t=new Date(d.time), ts=`${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')}`;
+      const el=document.createElement('div'); el.className='rec';
+      el.innerHTML=`<div class="rtop"><span>${d.label}</span><span class="tag ok">제출됨</span></div>
+        <img src="${d.img}" onclick="openInspect('${d.id}')">
+        <div class="rbot">${ts} 제출</div>`;
+      g.appendChild(el);
+    });
+  }
+
+  /* ══════════════ 교사 대시보드 ══════════════ */
+  function initTeacherOrStudent(){
+    if(isTeacher){
+      document.getElementById('studentTabs').style.display='none';
+      document.getElementById('viewExplore').style.display='none';
+      document.getElementById('viewSolve').style.display='none';
+      document.getElementById('viewDash').style.display='block';
+      document.getElementById('statusTxt').textContent='교사 모드';
+      const url=location.origin+location.pathname;
+      if(typeof QRCode!=='undefined'){
+        new QRCode(document.getElementById('qrSmall'),{text:url,width:38,height:38,colorDark:'#1A1A1A'});
+        new QRCode(document.getElementById('qrBig'),{text:url,width:260,height:260,colorDark:'#1A1A1A'});
+        document.getElementById('qrThumb').style.display='block';
+      }
+      if(database){
+        database.ref('.info/connected').on('value',s=>{ const on=s.val(); document.getElementById('dot').classList.toggle('on',on); document.getElementById('statusTxt').textContent=on?'교사 모드':'오프라인'; });
+        database.ref(DB_PATH).on('value', snap=>{
+          window.allData=[]; snap.forEach(c=>{ window.allData.push({id:c.key, ...c.val()}); });
+          window.allData.sort((a,b)=>b.time-a.time);
+          renderDash();
+        }, err=>console.warn('구독 오류',err));
+      }
+    } else {
+      if(database){
+        database.ref('.info/connected').on('value',s=>{ const on=s.val(); document.getElementById('dot').classList.toggle('on',on); document.getElementById('statusTxt').textContent=on?'연결됨':'오프라인'; });
+        database.ref(DB_PATH).on('value', snap=>{
+          const keys=myKeys(), mine=[];
+          snap.forEach(c=>{ if(keys.includes(c.key)) mine.push({id:c.key, ...c.val()}); });
+          mine.sort((a,b)=>b.time-a.time);
+          renderMy(mine);
+        });
+      }
+    }
+  }
+
+  function refreshDash(){
+    if(!database) return;
+    database.ref(DB_PATH).once('value').then(snap=>{
+      window.allData=[]; snap.forEach(c=>{ window.allData.push({id:c.key, ...c.val()}); });
+      window.allData.sort((a,b)=>b.time-a.time);
+      renderDash();
+    });
+  }
+
+  function renderDash(){
+    const cf=document.getElementById('fClass').value;
+    const pf=document.getElementById('fProblem').value;
+    const g=document.getElementById('dashGrid');
+    const data=(window.allData||[]).filter(d=>(cf==='all'||d.class===cf)&&(pf==='all'||String(d.pIdx)===pf));
+    if(!data.length){ g.innerHTML='<p style="color:var(--sub); font-size:15px; padding:8px;">아직 제출된 풀이가 없습니다.</p>'; return; }
+
+    const groups={};
+    data.forEach(d=>{ const k=String(d.pIdx); (groups[k]=groups[k]||[]).push(d); });
+
+    const order=[{key:String(EXPLORE_IDX), label:'탐구'}].concat(PROBLEMS.map((p,i)=>({key:String(i), label:p.label})));
+    g.innerHTML='';
+    order.forEach(sec=>{
+      const items=groups[sec.key]||[]; if(!items.length) return;
+      const box=document.createElement('div'); box.className='dash-section';
+      box.innerHTML=`<div class="dash-section-title">${sec.label} <span class="cnt">${items.length}명 제출</span></div>`;
+      const grid=document.createElement('div'); grid.className='grid';
+      items.forEach(d=>{
+        recCache[d.id]=d;
+        const t=new Date(d.time), ts=`${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')}`;
+        const el=document.createElement('div'); el.className='rec';
+        el.innerHTML=`<div class="rtop"><span>${d.class}반 ${d.name}</span><button class="del" onclick="delRec('${d.id}')">삭제</button></div>
+          <img src="${d.img}" onclick="openInspect('${d.id}')">
+          <div class="rbot">${ts} 제출</div>`;
+        grid.appendChild(el);
+      });
+      box.appendChild(grid); g.appendChild(box);
+    });
+  }
+
+  function delRec(id){ if(database && confirm('이 제출을 삭제할까요?')) database.ref(DB_PATH+'/'+id).remove(); }
+
+  /* ── 모달 ── */
+  function openInspect(id){
+    const d=recCache[id]; if(!d) return;
+    document.getElementById('inspectImg').src=d.img;
+    document.getElementById('inspectInfo').textContent = isTeacher ? `${d.class}반 ${d.name} · ${d.label}` : d.label;
+    openModal('inspectModal');
+  }
+  function openModal(id){ document.getElementById(id).classList.add('open'); }
+  function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+  /* ══════════════ 시작 ══════════════ */
+  window.onload=()=>{
+    document.getElementById('pageTitle').textContent=CONFIG.title;
+    document.title=CONFIG.title;
+
+    cv=document.getElementById('cv'); ctx=cv.getContext('2d'); skwrap=document.getElementById('skwrap');
+    exCv=document.getElementById('ex'); exCtx=exCv.getContext('2d'); exWrap=document.getElementById('exwrap');
+
+    document.getElementById('exTitle').textContent=exDef.title;
+    document.getElementById('exSub').textContent=exDef.sub;
+    exRenderTools();
+
+    // 문제 캔버스 입력
+    cv.addEventListener('mousedown',startDraw);
+    cv.addEventListener('mousemove',moveDraw);
+    window.addEventListener('mouseup',endDraw);
+    cv.addEventListener('touchstart',e=>{e.preventDefault(); startDraw(e);},{passive:false});
+    cv.addEventListener('touchmove',e=>{e.preventDefault(); moveDraw(e);},{passive:false});
+    cv.addEventListener('touchend',e=>{e.preventDefault(); endDraw();},{passive:false});
+
+    // 탐구 캔버스 입력
+    exCv.addEventListener('mousedown',exDown);
+    exCv.addEventListener('mousemove',exMove);
+    window.addEventListener('mouseup',exUp);
+    exCv.addEventListener('touchstart',e=>{e.preventDefault(); exDown(e);},{passive:false});
+    exCv.addEventListener('touchmove',e=>{e.preventDefault(); exMove(e);},{passive:false});
+    exCv.addEventListener('touchend',e=>{e.preventDefault(); exUp();},{passive:false});
+
+    initTeacherOrStudent();
+    renderProblemBar();
+    selectProblem(0);
+    if(isTeacher) currentView='dash';
+
+    // 레이아웃이 잡히는 시점이 브라우저마다 달라서, 크기 변화를 관찰해 캔버스를 맞춘다
+    if(typeof ResizeObserver!=='undefined'){
+      new ResizeObserver(()=>resize()).observe(skwrap);
+      new ResizeObserver(()=>exResize()).observe(exWrap);
+    }
+    resize(); exResize();
+    requestAnimationFrame(()=>{ resize(); exResize(); });
+    setTimeout(()=>{ resize(); exResize(); }, 300);
+  };
+
+  window.addEventListener('resize', ()=>{ resize(); exResize(); });
+</script>
+</body>
+</html>

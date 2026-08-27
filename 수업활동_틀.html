@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>수업 활동</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ▼▼▼ 여기만 고치면 새 차시가 완성됩니다 ▼▼▼
+     (코딩을 몰라도 이 <script> 안의 내용만 바꾸면 됩니다)
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+  // ── 1) 이번 차시 설정 ──────────────────────────────────
+  const CONFIG = {
+    // 화면 맨 위에 보이는 제목
+    title: "5단원 · 삼각형의 성질",
+
+    // 저장 폴더 이름. ★차시마다 반드시 다르게!★ (같으면 이전 제출과 섞입니다)
+    //  - 영문/숫자/밑줄만 사용 (띄어쓰기·한글·특수문자 X)
+    //  - 예: "unit5_triangle", "unit6_quad", "unit7_similar_0312"
+    folder: "unit5_triangle",
+
+    // 학생에게 보여줄 안내 한 줄
+    intro: "문제를 골라 아래 노트에 풀이 과정을 적고 제출하세요.",
+  };
+
+  // ── 2) 문제 목록 ──────────────────────────────────────
+  //  문제를 추가하려면 { } 블록을 콤마로 이어서 더 넣으면 됩니다.
+  //  - label : 문제 버튼/제목에 보일 이름
+  //  - text  : 문제 설명 (그냥 글자로 씀)
+  //  - math  : 수식 (KaTeX 문법). 없으면 "" 로 비워두세요.
+  //            예) "\\angle A = 50^\\circ", "\\overline{AB} = 5"
+  //  - image : 도형 그림 주소(URL). 없으면 "" 로 비워두세요.
+  //            (그림 넣는 법은 맨 아래 설명서 참고)
+  const PROBLEMS = [
+    {
+      label: "문제 1",
+      text: "다음 이등변삼각형에서 ∠x 의 크기를 구하고, 그 이유를 쓰시오.",
+      math: "\\angle B = 70^\\circ",
+      image: "",
+    },
+    {
+      label: "문제 2",
+      text: "삼각형의 두 변의 수직이등분선이 만나는 점의 성질을 이용하여 문제를 푸시오.",
+      math: "",
+      image: "",
+    },
+    {
+      label: "문제 3",
+      text: "다음 그림에서 x 의 값을 구하는 풀이 과정을 쓰시오.",
+      math: "",
+      image: "",   // 예: "https://i.imgur.com/xxxx.png"
+    },
+  ];
+</script>
+<!-- ═══════════════════════════════════════════════════════════════
+     ▲▲▲ 여기까지만 고치면 됩니다 ▲▲▲
+     (아래 코드는 건드리지 마세요)
+     ═══════════════════════════════════════════════════════════════ -->
+
+<style>
+  :root{
+    --bg:#FAFAF8; --ink:#1A1A1A; --sub:#6B7280; --line:#E5E7EB;
+    --blue:#2563EB; --red:#DC2626; --ok:#059669; --okbg:#ECFDF5;
+    --panel:#FFFFFF; --accent:#0D9488;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  input:focus::placeholder{ color:transparent; }
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:'Pretendard',system-ui,sans-serif; line-height:1.6;
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:1100px; margin:0 auto; padding:20px 18px 60px;}
+  header.top{display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap;}
+  header.top h1{font-size:19px; margin:0; font-weight:800;}
+  .status{display:flex; align-items:center; gap:6px; font-size:13px; color:var(--sub);}
+  .dot{width:8px; height:8px; border-radius:50%; background:#9CA3AF;}
+  .dot.on{background:var(--ok);}
+
+  /* 탭 */
+  .tabs{display:flex; gap:6px; border-bottom:1px solid var(--line); margin-bottom:20px;}
+  .tab{padding:10px 16px; font-size:15px; font-weight:600; color:var(--sub); background:none; border:none; border-bottom:2px solid transparent; cursor:pointer; font-family:inherit;}
+  .tab.active{color:var(--ink); border-bottom-color:var(--ink);}
+
+  /* 문제 선택 바 */
+  .pbar{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px;}
+  .pbar button{padding:8px 16px; font-size:14px; font-weight:600; color:var(--sub); background:var(--panel); border:1px solid var(--line); border-radius:20px; cursor:pointer; font-family:inherit;}
+  .pbar button.active{color:var(--ink); border-color:var(--ink); font-weight:700;}
+
+  /* 문제 카드 */
+  .prompt{background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--ink); border-radius:10px; padding:18px 20px; margin-bottom:16px;}
+  .prompt .plabel{font-size:12.5px; font-weight:700; color:var(--sub); margin-bottom:6px;}
+  .prompt .ptext{font-size:16px;}
+  .prompt .pmath{margin-top:12px;}
+  .prompt .pmath .katex{font-size:1.3em;}
+  .prompt .pimg{margin-top:14px; text-align:center;}
+  .prompt .pimg img{max-width:100%; max-height:340px; border:1px solid var(--line); border-radius:8px;}
+
+  /* 스케치북 */
+  .sketch-wrap{position:relative; width:100%; aspect-ratio:4/3; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; touch-action:none;}
+  .sketch-wrap canvas{width:100%; height:100%; display:block;}
+  .sketch-tools{position:absolute; left:50%; bottom:14px; transform:translateX(-50%); display:flex; align-items:center; gap:12px; background:rgba(255,255,255,.96); border:1px solid var(--line); border-radius:24px; padding:7px 14px; box-shadow:0 4px 12px rgba(0,0,0,.1);}
+  .sk-colors{display:flex; gap:8px;}
+  .sk-dot{width:22px; height:22px; border-radius:50%; cursor:pointer; border:2px solid #fff; box-shadow:0 0 0 1px var(--line);}
+  .sk-dot.active{box-shadow:0 0 0 2px var(--ink);}
+  .sk-btn{font-family:inherit; font-size:14px; font-weight:600; color:var(--sub); background:none; border:none; cursor:pointer; padding:4px 8px; border-radius:6px;}
+  .sk-btn.active{color:var(--red); background:#FEF2F2;}
+
+  /* 제출 영역 */
+  .submit-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:16px;}
+  .submit-row select, .submit-row input{padding:11px 12px; border:1px solid var(--line); border-radius:8px; font-family:inherit; font-size:15px; outline:none;}
+  .submit-row select:focus, .submit-row input:focus{border-color:var(--ink);}
+  .btn-primary{margin-left:auto; padding:12px 26px; font-size:15px; font-weight:700; color:#fff; background:var(--ink); border:none; border-radius:9px; cursor:pointer; font-family:inherit;}
+  .btn-primary:disabled{opacity:.5;}
+  .btn-ghost{padding:11px 16px; font-size:14px; font-weight:600; color:var(--sub); background:none; border:1px solid var(--line); border-radius:8px; cursor:pointer; font-family:inherit;}
+
+  /* 내 제출 */
+  .records{margin-top:28px;}
+  .records h3{font-size:15px; margin:0 0 12px;}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:14px;}
+  .rec{background:var(--panel); border:1px solid var(--line); border-radius:10px; overflow:hidden;}
+  .rec .rtop{display:flex; justify-content:space-between; align-items:center; padding:9px 12px; font-size:13px; font-weight:600;}
+  .rec img{width:100%; display:block; border-top:1px solid var(--line); border-bottom:1px solid var(--line); cursor:pointer; background:#fff;}
+  .rec .rbot{padding:8px 12px; font-size:12.5px; color:var(--sub);}
+  .tag{font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px;}
+  .tag.ok{color:var(--ok); background:var(--okbg);}
+  .del{font-size:12px; color:var(--red); background:none; border:none; cursor:pointer; font-family:inherit;}
+
+  /* 교사 대시보드 */
+  .dash-head{display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px; margin-bottom:16px;}
+  .dash-head h2{font-size:18px; margin:0;}
+  .filters{display:flex; gap:8px; flex-wrap:wrap;}
+  .filters select{padding:8px 11px; font-size:14px; border:1px solid var(--line); border-radius:8px; font-family:inherit; background:#fff;}
+  .dash-section{margin-bottom:28px;}
+  .dash-section-title{font-size:16px; font-weight:700; margin-bottom:12px; padding-bottom:8px; border-bottom:2px solid var(--line); display:flex; align-items:center; gap:10px;}
+  .dash-section-title .cnt{font-size:13px; font-weight:600; color:var(--sub);}
+  .qr-thumb{position:absolute; top:16px; right:16px; cursor:pointer; text-align:center;}
+  .qr-thumb .cap{font-size:10px; color:var(--sub); margin-top:2px;}
+
+  /* 모달 */
+  .modal{position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; z-index:100; padding:20px;}
+  .modal.open{display:flex;}
+  .modal .box{background:#fff; border-radius:12px; padding:16px; max-width:90vw; max-height:90vh; overflow:auto;}
+  .modal img{max-width:100%; max-height:76vh; display:block; border-radius:8px;}
+  .modal .minfo{font-size:14px; font-weight:600; margin-bottom:10px;}
+  .modal .mclose{margin-top:12px; text-align:center;}
+
+  @media(max-width:600px){
+    .prompt .ptext{font-size:15px;}
+    .btn-primary{margin-left:0; width:100%;}
+    .submit-row{gap:8px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1 id="pageTitle">수업 활동</h1>
+    <div class="status"><span class="dot" id="dot"></span><span id="statusTxt">연결 중</span></div>
+  </header>
+
+  <!-- 학생/교사 공통: 탭은 학생만 보임 -->
+  <div class="tabs" id="studentTabs">
+    <button class="tab active" id="tabSolve" onclick="showView('solve')">문제 풀기</button>
+  </div>
+
+  <!-- ===== 학생: 문제 풀기 ===== -->
+  <div id="viewSolve">
+    <div class="pbar" id="pbar"></div>
+
+    <div class="prompt" id="prompt">
+      <div class="plabel" id="pLabel"></div>
+      <div class="ptext" id="pText"></div>
+      <div class="pmath" id="pMath"></div>
+      <div class="pimg" id="pImg"></div>
+    </div>
+
+    <div class="sketch-wrap" id="skwrap">
+      <canvas id="cv"></canvas>
+      <div class="sketch-tools">
+        <div class="sk-colors">
+          <div class="sk-dot active" style="background:#1A1A1A" onclick="setPen('#1A1A1A',this)"></div>
+          <div class="sk-dot" style="background:#DC2626" onclick="setPen('#DC2626',this)"></div>
+          <div class="sk-dot" style="background:#2563EB" onclick="setPen('#2563EB',this)"></div>
+        </div>
+        <button class="sk-btn" id="eraserBtn" onclick="toggleEraser()">지우개</button>
+        <button class="sk-btn" onclick="clearSketch()">전체 지우기</button>
+      </div>
+    </div>
+
+    <div class="submit-row">
+      <select id="stuClass">
+        <option value="">반 선택</option>
+        <option value="1">1반</option><option value="2">2반</option><option value="3">3반</option>
+        <option value="4">4반</option><option value="5">5반</option><option value="6">6반</option>
+        <option value="7">7반</option><option value="8">8반</option>
+      </select>
+      <input type="text" id="stuName" placeholder="이름" style="width:120px;">
+      <button class="btn-primary" id="submitBtn" onclick="submitAnswer()">풀이 제출하기</button>
+    </div>
+
+    <div class="records" id="myRecords" style="display:none;">
+      <h3>내가 제출한 풀이</h3>
+      <div class="grid" id="myGrid"></div>
+    </div>
+  </div>
+
+  <!-- ===== 교사: 대시보드 ===== -->
+  <div id="viewDash" style="display:none; position:relative;">
+    <div class="qr-thumb" id="qrThumb" onclick="openModal('qrModal')" style="display:none;">
+      <div id="qrSmall"></div><div class="cap">QR 크게</div>
+    </div>
+    <div class="dash-head">
+      <h2>전체 제출 현황</h2>
+      <div class="filters">
+        <select id="fClass" onchange="renderDash()">
+          <option value="all">모든 반</option>
+          <option value="1">1반</option><option value="2">2반</option><option value="3">3반</option>
+          <option value="4">4반</option><option value="5">5반</option><option value="6">6반</option>
+          <option value="7">7반</option><option value="8">8반</option>
+        </select>
+        <select id="fProblem" onchange="renderDash()"><option value="all">모든 문제</option></select>
+        <button class="btn-ghost" onclick="refreshDash()">↻ 새로고침</button>
+      </div>
+    </div>
+    <div id="dashGrid"></div>
+  </div>
+</div>
+
+<!-- 확대 모달 -->
+<div class="modal" id="inspectModal" onclick="closeModal('inspectModal')">
+  <div class="box" onclick="event.stopPropagation()">
+    <div class="minfo" id="inspectInfo"></div>
+    <img id="inspectImg" src="" alt="풀이">
+    <div class="mclose"><button class="btn-ghost" onclick="closeModal('inspectModal')">닫기</button></div>
+  </div>
+</div>
+<!-- QR 모달 -->
+<div class="modal" id="qrModal" onclick="closeModal('qrModal')">
+  <div class="box" onclick="event.stopPropagation()" style="text-align:center;">
+    <div class="minfo">학생 접속용 QR</div>
+    <div id="qrBig"></div>
+    <div class="mclose"><button class="btn-ghost" onclick="closeModal('qrModal')">닫기</button></div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  const isTeacher = new URLSearchParams(location.search).get('teacher')==='true';
+  const DB_PATH = 'classroom/' + CONFIG.folder;   // 차시별 폴더
+
+  // Firebase (없어도 그리기·풀이는 됨, 제출만 안 됨)
+  let database=null;
+  try{
+    if(typeof firebase!=='undefined'){
+      firebase.initializeApp({ databaseURL:"https://gugal-math-default-rtdb.firebaseio.com/" });
+      database=firebase.database();
+    }
+  }catch(e){ console.warn('Firebase 미연결', e); }
+
+  // ── KaTeX ──
+  function tex(t, inline){
+    if(!t) return '';
+    if(typeof katex!=='undefined'){
+      try{ return katex.renderToString(t,{throwOnError:false, displayMode:!inline}); }catch(e){ return t; }
+    }
+    return t;
+  }
+
+  // ── 상태 ──
+  let activeIdx=0;
+  let strokes=[], curStroke=null;
+  let penColor='#1A1A1A', eraserOn=false, dragging=false;
+
+  const cv=document.getElementById('cv'), ctx=cv.getContext('2d'), skwrap=document.getElementById('skwrap');
+
+  window.onload=()=>{
+    document.getElementById('pageTitle').textContent=CONFIG.title;
+    document.title=CONFIG.title;
+    resize();
+    initTeacherOrStudent();
+    renderProblemBar();
+    selectProblem(0);
+  };
+  window.addEventListener('resize', resize);
+  function resize(){ cv.width=skwrap.clientWidth; cv.height=skwrap.clientHeight; draw(); }
+
+  // ── 문제 표시 ──
+  function renderProblemBar(){
+    const bar=document.getElementById('pbar'); bar.innerHTML='';
+    PROBLEMS.forEach((p,i)=>{
+      const b=document.createElement('button');
+      b.textContent=p.label; b.id='pb_'+i;
+      b.onclick=()=>selectProblem(i);
+      bar.appendChild(b);
+    });
+    // 교사 문제 필터 채우기
+    const fp=document.getElementById('fProblem');
+    PROBLEMS.forEach((p,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=p.label; fp.appendChild(o); });
+  }
+
+  function selectProblem(i){
+    activeIdx=i;
+    document.querySelectorAll('#pbar button').forEach(b=>b.classList.remove('active'));
+    const btn=document.getElementById('pb_'+i); if(btn) btn.classList.add('active');
+    const p=PROBLEMS[i];
+    document.getElementById('pLabel').textContent=p.label;
+    document.getElementById('pText').textContent=p.text;
+    document.getElementById('pMath').innerHTML = p.math ? tex(p.math,false) : '';
+    document.getElementById('pImg').innerHTML = p.image ? `<img src="${p.image}" alt="문제 그림">` : '';
+    // 새 문제 → 노트 비우기
+    strokes=[]; curStroke=null; draw();
+  }
+
+  // ── 스케치북 그리기 ──
+  function draw(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.lineCap='round'; ctx.lineJoin='round';
+    const all = curStroke ? strokes.concat([curStroke]) : strokes;
+    all.forEach(s=>{
+      if(!s.pts.length) return;
+      ctx.strokeStyle=s.color; ctx.lineWidth=s.width;
+      ctx.beginPath(); ctx.moveTo(s.pts[0].x,s.pts[0].y);
+      for(let i=1;i<s.pts.length;i++) ctx.lineTo(s.pts[i].x,s.pts[i].y);
+      ctx.stroke();
+    });
+  }
+  function pos(e){ const r=cv.getBoundingClientRect(); const t=e.touches?e.touches[0]:e; return {x:t.clientX-r.left, y:t.clientY-r.top}; }
+  function startDraw(e){ dragging=true; const p=pos(e); curStroke={color:eraserOn?'#ffffff':penColor, width:eraserOn?18:2.5, pts:[p]}; draw(); }
+  function moveDraw(e){ if(!dragging||!curStroke) return; curStroke.pts.push(pos(e)); draw(); }
+  function endDraw(){ if(curStroke){ if(curStroke.pts.length) strokes.push(curStroke); curStroke=null; draw(); } dragging=false; }
+
+  cv.addEventListener('mousedown',startDraw);
+  cv.addEventListener('mousemove',moveDraw);
+  window.addEventListener('mouseup',endDraw);
+  cv.addEventListener('touchstart',e=>{e.preventDefault(); startDraw(e);},{passive:false});
+  cv.addEventListener('touchmove',e=>{e.preventDefault(); moveDraw(e);},{passive:false});
+  cv.addEventListener('touchend',e=>{e.preventDefault(); endDraw();},{passive:false});
+
+  function setPen(c,el){ penColor=c; eraserOn=false; document.querySelectorAll('.sk-dot').forEach(d=>d.classList.remove('active')); if(el) el.classList.add('active'); document.getElementById('eraserBtn').classList.remove('active'); }
+  function toggleEraser(){ eraserOn=!eraserOn; document.getElementById('eraserBtn').classList.toggle('active', eraserOn); }
+  function clearSketch(){ if(strokes.length && !confirm('필기한 내용을 모두 지울까요?')) return; strokes=[]; curStroke=null; draw(); }
+
+  // ── 제출 ──
+  function myKeys(){ const k=localStorage.getItem('cls_'+CONFIG.folder); return k?JSON.parse(k):[]; }
+  function saveKey(k){ const a=myKeys(); if(!a.includes(k)){ a.push(k); localStorage.setItem('cls_'+CONFIG.folder, JSON.stringify(a)); } }
+
+  function submitAnswer(){
+    if(!database){ alert('인터넷 연결이 필요해요.'); return; }
+    const cls=document.getElementById('stuClass').value;
+    const name=document.getElementById('stuName').value.trim();
+    if(!cls||!name){ alert('반과 이름을 입력해 주세요.'); return; }
+    if(strokes.length<1){ alert('노트에 풀이를 적어 주세요.'); return; }
+
+    const btn=document.getElementById('submitBtn');
+    btn.disabled=true; btn.textContent='전송 중...';
+    const img=cv.toDataURL('image/png');
+
+    const ref=database.ref(DB_PATH).push();
+    saveKey(ref.key);
+    ref.set({
+      class:cls, name:name, pIdx:activeIdx, label:PROBLEMS[activeIdx].label,
+      img:img, time:Date.now()
+    }).then(()=>{
+      alert('제출되었습니다! 아래 “내가 제출한 풀이”에서 확인할 수 있어요.');
+      btn.disabled=false; btn.textContent='풀이 제출하기';
+      refreshMyRecords();
+    }).catch(()=>{ alert('전송에 실패했어요. 다시 시도해 주세요.'); btn.disabled=false; btn.textContent='풀이 제출하기'; });
+  }
+
+  function refreshMyRecords(){
+    if(!database||isTeacher) return;
+    database.ref(DB_PATH).once('value').then(snap=>{
+      const keys=myKeys(); const mine=[];
+      snap.forEach(c=>{ if(keys.includes(c.key)) mine.push({id:c.key, ...c.val()}); });
+      mine.sort((a,b)=>b.time-a.time);
+      renderMy(mine);
+    });
+  }
+
+  const recCache={};
+  function renderMy(data){
+    const wrap=document.getElementById('myRecords'), g=document.getElementById('myGrid');
+    wrap.style.display='block';
+    if(!data.length){ g.innerHTML='<p style="color:var(--sub); font-size:14px;">아직 제출한 풀이가 없어요.</p>'; return; }
+    g.innerHTML='';
+    data.forEach(d=>{
+      recCache[d.id]=d;
+      const t=new Date(d.time), ts=`${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')}`;
+      const el=document.createElement('div'); el.className='rec';
+      el.innerHTML=`<div class="rtop"><span>${d.label}</span><span class="tag ok">제출됨</span></div>
+        <img src="${d.img}" onclick="openInspect('${d.id}')">
+        <div class="rbot">${ts} 제출</div>`;
+      g.appendChild(el);
+    });
+  }
+
+  // ── 교사 대시보드 ──
+  function initTeacherOrStudent(){
+    if(isTeacher){
+      document.getElementById('studentTabs').style.display='none';
+      document.getElementById('viewSolve').style.display='none';
+      document.getElementById('viewDash').style.display='block';
+      document.getElementById('statusTxt').textContent='교사 모드';
+      // QR
+      const url=location.origin+location.pathname;
+      const qt=document.getElementById('qrThumb');
+      if(typeof QRCode!=='undefined'){
+        new QRCode(document.getElementById('qrSmall'),{text:url,width:38,height:38,colorDark:'#1A1A1A'});
+        new QRCode(document.getElementById('qrBig'),{text:url,width:260,height:260,colorDark:'#1A1A1A'});
+        qt.style.display='block';
+      }
+      if(database){
+        database.ref('.info/connected').on('value',s=>{ const on=s.val(); document.getElementById('dot').classList.toggle('on',on); document.getElementById('statusTxt').textContent=on?'교사 모드':'오프라인'; });
+        database.ref(DB_PATH).on('value', snap=>{
+          window.allData=[]; snap.forEach(c=>{ window.allData.push({id:c.key, ...c.val()}); });
+          window.allData.sort((a,b)=>b.time-a.time);
+          renderDash();
+        }, err=>console.warn('구독 오류',err));
+      }
+    } else {
+      if(database){
+        database.ref('.info/connected').on('value',s=>{ const on=s.val(); document.getElementById('dot').classList.toggle('on',on); document.getElementById('statusTxt').textContent=on?'연결됨':'오프라인'; });
+        database.ref(DB_PATH).on('value', snap=>{
+          const keys=myKeys(), mine=[];
+          snap.forEach(c=>{ if(keys.includes(c.key)) mine.push({id:c.key, ...c.val()}); });
+          mine.sort((a,b)=>b.time-a.time);
+          renderMy(mine);
+        });
+      }
+    }
+  }
+
+  function refreshDash(){
+    if(!database) return;
+    database.ref(DB_PATH).once('value').then(snap=>{
+      window.allData=[]; snap.forEach(c=>{ window.allData.push({id:c.key, ...c.val()}); });
+      window.allData.sort((a,b)=>b.time-a.time);
+      renderDash();
+    });
+  }
+
+  function renderDash(){
+    const cf=document.getElementById('fClass').value;
+    const pf=document.getElementById('fProblem').value;
+    const g=document.getElementById('dashGrid');
+    const data=(window.allData||[]).filter(d=>(cf==='all'||d.class===cf)&&(pf==='all'||String(d.pIdx)===pf));
+    if(!data.length){ g.innerHTML='<p style="color:var(--sub); font-size:15px; padding:8px;">아직 제출된 풀이가 없습니다.</p>'; return; }
+
+    const groups={};
+    PROBLEMS.forEach((p,i)=>groups[i]=[]);
+    data.forEach(d=>{ if(!groups[d.pIdx]) groups[d.pIdx]=[]; groups[d.pIdx].push(d); });
+
+    g.innerHTML='';
+    PROBLEMS.forEach((p,i)=>{
+      const items=groups[i]||[]; if(!items.length) return;
+      const sec=document.createElement('div'); sec.className='dash-section';
+      sec.innerHTML=`<div class="dash-section-title">${p.label} <span class="cnt">${items.length}명 제출</span></div>`;
+      const grid=document.createElement('div'); grid.className='grid';
+      items.forEach(d=>{
+        recCache[d.id]=d;
+        const t=new Date(d.time), ts=`${t.getHours()}:${String(t.getMinutes()).padStart(2,'0')}`;
+        const el=document.createElement('div'); el.className='rec';
+        el.innerHTML=`<div class="rtop"><span>${d.class}반 ${d.name}</span><button class="del" onclick="delRec('${d.id}')">삭제</button></div>
+          <img src="${d.img}" onclick="openInspect('${d.id}')">
+          <div class="rbot">${ts} 제출</div>`;
+        grid.appendChild(el);
+      });
+      sec.appendChild(grid); g.appendChild(sec);
+    });
+  }
+
+  function delRec(id){ if(database && confirm('이 제출을 삭제할까요?')) database.ref(DB_PATH+'/'+id).remove(); }
+
+  // ── 모달 ──
+  function openInspect(id){
+    const d=recCache[id]; if(!d) return;
+    document.getElementById('inspectImg').src=d.img;
+    document.getElementById('inspectInfo').textContent = isTeacher ? `${d.class}반 ${d.name} · ${d.label}` : d.label;
+    openModal('inspectModal');
+  }
+  function openModal(id){ document.getElementById(id).classList.add('open'); }
+  function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+  function showView(v){ /* 학생은 탭 하나뿐 */ }
+</script>
+</body>
+</html>
