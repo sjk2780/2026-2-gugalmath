@@ -166,7 +166,7 @@
   <!-- 학생 탭 -->
   <div class="tabs" id="studentTabs">
     <button class="tab active" id="tabExplore" onclick="showView('explore')">탐구하기</button>
-    <button class="tab" id="tabSolve" onclick="showView('solve')">문제 풀기</button>
+    <button class="tab" id="tabSolve" onclick="showView('solve')">문제 풀기</button><button class="tab" id="tabDash" onclick="showView('dash')" style="display:none;">제출 현황</button>
   </div>
 
   <!-- ===== 학생: 탐구하기 ===== -->
@@ -952,8 +952,10 @@
     currentView=v;
     document.getElementById('tabExplore').classList.toggle('active', v==='explore');
     document.getElementById('tabSolve').classList.toggle('active', v==='solve');
+    document.getElementById('tabDash').classList.toggle('active', v==='dash');
     document.getElementById('viewExplore').style.display = v==='explore'?'block':'none';
     document.getElementById('viewSolve').style.display   = v==='solve'?'block':'none';
+    document.getElementById('viewDash').style.display    = v==='dash'?'block':'none';
     if(v==='explore') setTimeout(exResize,0);
     if(v==='solve')   setTimeout(resize,0);
   }
@@ -1023,10 +1025,14 @@
   /* ══════════════ 교사 대시보드 ══════════════ */
   function initTeacherOrStudent(){
     if(isTeacher){
-      document.getElementById('studentTabs').style.display='none';
+      const _tabs=document.getElementById('studentTabs'), _qt=document.getElementById('qrThumb');
+      document.getElementById('tabDash').style.display='';
+      _tabs.style.alignItems='flex-end';
+      _tabs.appendChild(_qt);
+      _qt.style.position='static'; _qt.style.marginLeft='auto'; _qt.style.paddingBottom='4px';
       document.getElementById('viewExplore').style.display='none';
       document.getElementById('viewSolve').style.display='none';
-      document.getElementById('viewDash').style.display='block';
+      showView('dash');
       document.getElementById('statusTxt').textContent='교사 모드';
       const url=location.origin+location.pathname;
       if(typeof QRCode!=='undefined'){
