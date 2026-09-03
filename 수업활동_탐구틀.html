@@ -85,16 +85,21 @@
   .exnote.show{display:block;}
 
   /* 증명 보기 — 교실 앞에서 띄우므로 글씨를 크게 */
-  .pfstep{background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--blue); border-radius:10px; padding:16px 20px; margin-bottom:14px; min-height:86px;}
-  .pfnum{font-size:13px; font-weight:800; color:var(--blue); letter-spacing:.04em; margin-bottom:6px;}
-  .pftext{font-size:21px; line-height:1.55; white-space:pre-wrap; font-weight:500;}
+  .pfnum{font-size:14px; font-weight:800; color:var(--blue); letter-spacing:.04em; margin-bottom:10px;}
+  /* 다음을 누를 때마다 증명 과정이 아래에 쌓인다 */
+  .pflog{background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--blue); border-radius:10px; padding:6px 20px; margin-top:16px;}
+  .pflog .item{display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px dashed var(--line);
+               font-size:20px; line-height:1.55; white-space:pre-wrap; color:var(--sub);}
+  .pflog .item:last-child{border-bottom:none;}
+  .pflog .item.cur{color:var(--ink); font-weight:600;}
+  .pflog .n{flex:none; min-width:24px; font-size:14px; font-weight:800; color:var(--blue); padding-top:5px;}
   /* 증명 캔버스는 프로젝터 화면에 맞게 가로로 넓게 */
   #pfwrap{aspect-ratio:16/9;}
   .pfnav{display:flex; align-items:center; gap:10px; margin-top:14px; flex-wrap:wrap;}
   .pfdots{display:flex; gap:6px; margin:0 4px;}
   .pfdots i{width:9px; height:9px; border-radius:50%; background:var(--line); display:block;}
   .pfdots i.on{background:var(--blue);}
-  @media(max-width:600px){ .pftext{font-size:18px;} }
+  @media(max-width:600px){ .pflog .item{font-size:17px;} }
 
   /* 제출 영역 */
   .submit-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:16px;}
@@ -190,13 +195,20 @@
   <div id="viewProof" style="display:none;">
     <div class="extools" id="pfPicker"></div>
 
-    <div class="pfstep">
-      <div class="pfnum" id="pfNum"></div>
-      <div class="pftext" id="pfText"></div>
-    </div>
+    <div class="pfnum" id="pfNum"></div>
 
     <div class="sketch-wrap" id="pfwrap">
       <canvas id="pf"></canvas>
+      <div class="sketch-tools" id="pfTools">
+        <div class="sk-colors">
+          <div class="sk-dot active" style="background:#DC2626" onclick="pfSetPen('#DC2626',this)"></div>
+          <div class="sk-dot" style="background:#2563EB" onclick="pfSetPen('#2563EB',this)"></div>
+          <div class="sk-dot" style="background:#1A1A1A" onclick="pfSetPen('#1A1A1A',this)"></div>
+        </div>
+        <button class="sk-btn" id="pfEraserBtn" onclick="pfToggleEraser()">지우개</button>
+        <button class="sk-btn" onclick="pfUndo()">되돌리기</button>
+        <button class="sk-btn" onclick="pfClearInk()">필기 지우기</button>
+      </div>
     </div>
 
     <div class="pfnav">
@@ -205,6 +217,8 @@
       <button class="btn-primary" onclick="pfGo(1)" id="pfNext" style="margin-left:0;">다음 →</button>
       <button class="btn-ghost" onclick="pfReset()">처음부터</button>
     </div>
+
+    <div class="pflog" id="pfLog"></div>
   </div>
 
   <!-- ===== 학생: 문제 풀기 ===== -->
@@ -957,6 +971,18 @@
 
   /* ══════════════ 증명 보기 ══════════════ */
   const PROOFS = {
+    iso: {
+      name:'이등변삼각형의 두 밑각',
+      steps:[
+        'AB = AC 인 이등변삼각형 ABC에서\n∠A의 이등분선이 BC와 만나는 점을 D라고 하자.',
+        '△ABD와 △ACD에서\nAB = AC,   AD는 공통인 변,   ∠BAD = ∠CAD',
+        '따라서 △ABD ≡ △ACD (SAS 합동)',
+        '그러므로 ∠B = ∠C\n즉, 이등변삼각형의 두 밑각의 크기는 같다.',
+        '또 △ABD ≡ △ACD 이므로 ∠ADB = ∠ADC 이고\n∠ADB + ∠ADC = 180° 이므로   ∠ADB = ∠ADC = 90°',
+        '또 △ABD ≡ △ACD 이므로   BD = DC',
+        '즉, 이등변삼각형에서 꼭지각의 이등분선은\n밑변을 수직이등분한다.'
+      ]
+    },
     rha: {
       name:'빗변 + 한 예각 (RHA)',
       steps:[
@@ -979,11 +1005,78 @@
         '따라서 두 직각삼각형 ABC와 DEF는\n빗변의 길이가 같고 한 예각의 크기가 같으므로\n△ABC ≡ △DEF',
         '즉, 빗변의 길이가 같고 다른 한 변의 길이가 같은\n두 직각삼각형은 서로 합동이다.'
       ]
+    },
+    circum: {
+      name:'세 변의 수직이등분선은 한 점에서 만난다',
+      steps:[
+        '△ABC에서 두 변 BC와 CA의 수직이등분선의\n교점을 O라고 하자.',
+        '점 O는 BC의 수직이등분선 위에 있으므로\nOB = OC',
+        '점 O는 CA의 수직이등분선 위에 있으므로\nOC = OA',
+        '따라서   OA = OB = OC',
+        '점 O에서 AB에 내린 수선의 발을 D라고 하자.\n△OAD와 △OBD에서\n∠ODA = ∠ODB = 90°,  OA = OB,  OD는 공통인 변',
+        '따라서 △OAD ≡ △OBD (RHS 합동)\n그러므로   AD = BD',
+        '즉 OD는 AB의 수직이등분선이므로,\n△ABC의 세 변의 수직이등분선은 한 점 O에서 만난다.'
+      ]
+    },
+    incenter: {
+      name:'세 내각의 이등분선은 한 점에서 만난다',
+      steps:[
+        '△ABC에서 ∠A와 ∠B의 이등분선의 교점을 I라 하고,\n점 I에서 세 변 AB, BC, CA에 내린 수선의 발을\n각각 D, E, F라고 하자.',
+        '점 I는 ∠A의 이등분선 위에 있으므로\nID = IF',
+        '점 I는 ∠B의 이등분선 위에 있으므로\nID = IE',
+        '따라서   ID = IE = IF',
+        'IC를 그으면 △ICE와 △ICF에서\n∠IEC = ∠IFC = 90°,  IC는 공통인 변,  IE = IF',
+        '따라서 △ICE ≡ △ICF (RHS 합동)\n그러므로   ∠ICE = ∠ICF',
+        '즉 IC는 ∠C의 이등분선이므로,\n△ABC의 세 내각의 이등분선은 한 점 I에서 만난다.'
+      ]
     }
   };
 
   let pfCv, pfCtx, pfWrap, pfW=0, pfH=0;
   let pf={ type:'rhs', step:0, flip:0, move:0, anim:null };
+
+  /* ── 증명 화면 위에 직접 필기하는 펜 ── */
+  let pfStrokes=[], pfCur=null, pfPen='#DC2626', pfErase=false, pfDrag=false;
+  let pfInk=null, pfInkCtx=null;
+  function pfInkPaint(){
+    if(!pfW||!pfH) return;
+    if(!pfInk){ pfInk=document.createElement('canvas'); pfInkCtx=pfInk.getContext('2d'); }
+    if(pfInk.width!==pfW || pfInk.height!==pfH){ pfInk.width=pfW; pfInk.height=pfH; }
+    pfInkCtx.clearRect(0,0,pfW,pfH);
+    pfInkCtx.lineCap='round'; pfInkCtx.lineJoin='round';
+    const all = pfCur ? pfStrokes.concat([pfCur]) : pfStrokes;
+    all.forEach(s=>{
+      if(!s.pts.length) return;
+      pfInkCtx.globalCompositeOperation = s.erase ? 'destination-out' : 'source-over';
+      pfInkCtx.strokeStyle = s.erase ? '#000' : s.color;
+      pfInkCtx.lineWidth = s.width;
+      pfInkCtx.beginPath(); pfInkCtx.moveTo(s.pts[0].x, s.pts[0].y);
+      for(let i=1;i<s.pts.length;i++) pfInkCtx.lineTo(s.pts[i].x, s.pts[i].y);
+      pfInkCtx.stroke();
+    });
+    pfInkCtx.globalCompositeOperation='source-over';
+    pfCtx.drawImage(pfInk,0,0);
+  }
+  function pfPos(e){
+    const r=pfCv.getBoundingClientRect();
+    const t=e.touches&&e.touches[0]?e.touches[0]:e;
+    return {x:t.clientX-r.left, y:t.clientY-r.top};
+  }
+  function pfDown(e){ pfDrag=true; pfCur={color:pfPen, width:pfErase?26:3, erase:pfErase, pts:[pfPos(e)]}; pfDraw(); }
+  function pfMove(e){ if(!pfDrag||!pfCur) return; pfCur.pts.push(pfPos(e)); pfDraw(); }
+  function pfUp(){ if(pfCur){ if(pfCur.pts.length) pfStrokes.push(pfCur); pfCur=null; pfDraw(); } pfDrag=false; }
+  function pfSetPen(c,el){
+    pfPen=c; pfErase=false;
+    document.querySelectorAll('#pfTools .sk-dot').forEach(d=>d.classList.remove('active'));
+    if(el) el.classList.add('active');
+    document.getElementById('pfEraserBtn').classList.remove('active');
+  }
+  function pfToggleEraser(){
+    pfErase=!pfErase;
+    document.getElementById('pfEraserBtn').classList.toggle('active', pfErase);
+  }
+  function pfUndo(){ if(pfStrokes.length){ pfStrokes.pop(); pfDraw(); } }
+  function pfClearInk(){ pfStrokes=[]; pfCur=null; pfDraw(); }
 
   function pfDef(){ return PROOFS[pf.type]; }
 
@@ -993,6 +1086,17 @@
     if(step<=0) return {flip:0, move:0};
     if(step===1) return {flip:1, move:0};
     return {flip:1, move:1};
+  }
+
+  // 5.1 / 5.3 / 5.4 증명용 삼각형 배치
+  function pfTri(){
+    const cx=pfW*0.50, top=pfH*0.14, bot=pfH*0.84;
+    const half=pfW*0.19;
+    if(pf.type==='iso'){                    // 이등변삼각형(좌우대칭)
+      return { A:{x:cx, y:top}, B:{x:cx-half, y:bot}, C:{x:cx+half, y:bot} };
+    }
+    // 외심/내심은 일반 삼각형(예각)이어야 관찰이 자연스럽다
+    return { A:{x:cx-pfW*0.04, y:top}, B:{x:cx-half*1.15, y:bot}, C:{x:cx+half*1.1, y:bot} };
   }
 
   function pfGeom(){
@@ -1049,9 +1153,14 @@
 
   function pfDraw(){
     if(!pfCtx) return;
+    if(!pfW || !pfH) return;      // 탭이 아직 안 열려 크기가 0일 때는 그리지 않는다
     pfCtx.clearRect(0,0,pfW,pfH);
     pfCtx.fillStyle='#fff'; pfCtx.fillRect(0,0,pfW,pfH);
     const g=pfGeom(), s=pf.step, ink='#1A1A1A', teal='#0D9488', blue='#2563EB', red='#DC2626';
+
+    if(pf.type==='iso'){ pfDrawIso(s,ink,teal,blue,red); pfInkPaint(); return; }
+    if(pf.type==='circum'){ pfDrawCircum(s,ink,teal,blue,red); pfInkPaint(); return; }
+    if(pf.type==='incenter'){ pfDrawIncenter(s,ink,teal,blue,red); pfInkPaint(); return; }
 
     if(pf.type==='rha'){
       pfDrawTri(g.A,g.B,g.C,ink,3);
@@ -1063,11 +1172,7 @@
       pfTick(g.A,g.B,2); pfTick(g.D,g.E,2,teal);                       // AB = DE
       if(s>=0){ pfArc(g.B,g.A,g.C,34,blue,'∠B'); pfArc(g.E,g.D,g.F,34,blue,'∠E'); }
       if(s>=1){ pfArc(g.A,g.B,g.C,34,red,'∠A'); pfArc(g.D,g.E,g.F,34,red,'∠D'); }
-      pfCtx.save();
-      pfCtx.font='700 18px Pretendard, sans-serif'; pfCtx.fillStyle=ink; pfCtx.textAlign='center';
-      if(s>=2) pfCtx.fillText('∠A = ∠D', pfW*0.5, pfH*0.16);
-      if(s>=3){ pfCtx.fillStyle=blue; pfCtx.fillText('△ABC ≡ △DEF', pfW*0.5, pfH*0.16+30); }
-      pfCtx.restore();
+      pfInkPaint();
       return;
     }
 
@@ -1101,12 +1206,86 @@
       pfCtx.closePath(); pfCtx.fill(); pfCtx.restore();
     }
     if(s>=5 && joined){ pfArc(g.B,g.A,g.E,34,blue,'∠B'); pfArc(g.E,g.A,g.B,34,blue,'∠E'); }
-    pfCtx.save();
-    pfCtx.font='700 19px Pretendard, sans-serif'; pfCtx.textAlign='center';
-    if(s>=4 && joined){ pfCtx.fillStyle=ink; pfCtx.fillText('AB = AE  →  △ABE는 이등변삼각형', pfW*0.5, pfH*0.13); }
-    if(s>=5 && joined){ pfCtx.fillStyle=blue; pfCtx.fillText('∠B = ∠E', pfW*0.5, pfH*0.13+30); }
-    if(s>=6 && joined){ pfCtx.fillStyle=blue; pfCtx.fillText('△ABC ≡ △DEF', pfW*0.5, pfH*0.13+60); }
-    pfCtx.restore();
+    pfInkPaint();
+  }
+
+  /* ── 5.1 이등변삼각형의 성질 증명 ── */
+  function pfDrawIso(s,ink,teal,blue,red){
+    const t=pfTri(), A=t.A, B=t.B, C=t.C, D=mid(B,C);
+    pfSeg(A,B,ink,3); pfSeg(B,C,ink,3); pfSeg(C,A,ink,3);
+    pfSeg(A,D,teal,2.6);
+    pfTick(A,B,1); pfTick(A,C,1);                       // AB = AC
+    pfArc(A,B,D,44,teal); pfArc(A,D,C,52,teal);         // ∠BAD = ∠CAD
+    pfLabel(A,'A',ink,0,-24); pfLabel(B,'B',ink,-24,12); pfLabel(C,'C',ink,24,12);
+    pfLabel(D,'D',teal,0,28);
+    if(s>=1){                                            // 공통인 변 AD 강조
+      pfSeg(A,D,blue,4); pfTick(A,D,3,blue);
+    }
+    if(s>=2){                                            // 합동인 두 삼각형
+      pfCtx.save(); pfCtx.fillStyle='rgba(37,99,235,.08)';
+      pfCtx.beginPath(); pfCtx.moveTo(A.x,A.y); pfCtx.lineTo(B.x,B.y); pfCtx.lineTo(D.x,D.y); pfCtx.closePath(); pfCtx.fill();
+      pfCtx.fillStyle='rgba(13,148,136,.10)';
+      pfCtx.beginPath(); pfCtx.moveTo(A.x,A.y); pfCtx.lineTo(D.x,D.y); pfCtx.lineTo(C.x,C.y); pfCtx.closePath(); pfCtx.fill();
+      pfCtx.restore();
+    }
+    if(s>=3){ pfArc(B,A,C,38,red,'∠B'); pfArc(C,B,A,38,red,'∠C'); }
+    if(s>=4){ pfRight(D, sub(A,D), sub(C,D), red); }
+    if(s>=5){ pfTick(B,D,2,red); pfTick(D,C,2,red); }
+    pfInkPaint();
+  }
+
+  /* ── 5.3 외심 증명 ── */
+  function pfDrawCircum(s,ink,teal,blue,red){
+    const t=pfTri(), A=t.A, B=t.B, C=t.C;
+    const O=circumcenter(A,B,C), Mbc=mid(B,C), Mca=mid(C,A), D=mid(A,B);
+    if(!O) return;
+    pfSeg(A,B,ink,3); pfSeg(B,C,ink,3); pfSeg(C,A,ink,3);
+    pfLabel(A,'A',ink,0,-24); pfLabel(B,'B',ink,-24,14); pfLabel(C,'C',ink,24,14);
+    // BC, CA의 수직이등분선
+    pfSeg(O,Mbc,teal,2.4,[7,5]); pfTick(B,Mbc,1,teal); pfTick(Mbc,C,1,teal);
+    pfRight(Mbc, sub(O,Mbc), sub(C,Mbc), teal);
+    pfSeg(O,Mca,teal,2.4,[7,5]); pfTick(C,Mca,1,teal); pfTick(Mca,A,1,teal);
+    pfRight(Mca, sub(O,Mca), sub(A,Mca), teal);
+    pfDot2(O,red,6); pfLabel(O,'O',red,16,-14);
+    if(s>=1){ pfSeg(O,B,blue,2.6); pfSeg(O,C,blue,2.6); }
+    if(s>=2){ pfSeg(O,A,blue,2.6); }
+    if(s>=3){ pfTick(O,A,1,blue); pfTick(O,B,1,blue); pfTick(O,C,1,blue); }
+    if(s>=4){
+      pfSeg(O,D,red,2.6); pfDot2(D,red,4.5); pfLabel(D,'D',red,-16,-12);
+      pfRight(D, sub(O,D), sub(B,D), red);
+    }
+    if(s>=5){ pfTick(A,D,2,red); pfTick(D,B,2,red); }
+    pfInkPaint();
+  }
+
+  /* ── 5.4 내심 증명 ── */
+  function pfDrawIncenter(s,ink,teal,blue,red){
+    const t=pfTri(), A=t.A, B=t.B, C=t.C;
+    const I=incenter(A,B,C);
+    if(!I) return;
+    const D=footPerp(I,A,B), E=footPerp(I,B,C), F=footPerp(I,C,A);
+    pfSeg(A,B,ink,3); pfSeg(B,C,ink,3); pfSeg(C,A,ink,3);
+    pfLabel(A,'A',ink,0,-24); pfLabel(B,'B',ink,-24,14); pfLabel(C,'C',ink,24,14);
+    // ∠A, ∠B의 이등분선
+    const dA=norm(add(norm(sub(B,A)), norm(sub(C,A)))), fA=lineX(A,dA,B,sub(C,B));
+    const dB=norm(add(norm(sub(A,B)), norm(sub(C,B)))), fB=lineX(B,dB,A,sub(C,A));
+    if(fA) pfSeg(A,fA,teal,2.4,[7,5]);
+    if(fB) pfSeg(B,fB,teal,2.4,[7,5]);
+    pfArc(A,B,I,40,teal); pfArc(A,I,C,48,teal);
+    pfArc(B,I,A,40,teal); pfArc(B,C,I,48,teal);
+    pfDot2(I,red,6); pfLabel(I,'I',red,16,-14);
+    pfLabel(D,'D',blue,-16,-8); pfLabel(E,'E',blue,0,24); pfLabel(F,'F',blue,18,-8);
+    if(s>=1){ pfSeg(I,D,blue,2.6); pfSeg(I,F,blue,2.6);
+      pfRight(D, sub(I,D), sub(B,D), blue); pfRight(F, sub(I,F), sub(A,F), blue); }
+    if(s>=2){ pfSeg(I,E,blue,2.6); pfRight(E, sub(I,E), sub(C,E), blue); }
+    if(s>=3){ pfTick(I,D,1,blue); pfTick(I,E,1,blue); pfTick(I,F,1,blue); }
+    if(s>=4){ pfSeg(I,C,red,2.6); }
+    if(s>=5){ pfArc(C,E,I,40,red); pfArc(C,I,F,48,red); }
+    pfInkPaint();
+  }
+  function pfDot2(p,color,r){
+    pfCtx.save(); pfCtx.fillStyle=color;
+    pfCtx.beginPath(); pfCtx.arc(p.x,p.y,r||5,0,Math.PI*2); pfCtx.fill(); pfCtx.restore();
   }
 
   function pfAnimateTo(step){
@@ -1127,7 +1306,16 @@
   function pfRender(){
     const def=pfDef(), n=def.steps.length;
     document.getElementById('pfNum').textContent='단계 '+(pf.step+1)+' / '+n+'  ·  '+def.name;
-    document.getElementById('pfText').textContent=def.steps[pf.step];
+    // 지금까지의 과정을 아래에 쌓아 보여준다(칠판 판서처럼)
+    const log=document.getElementById('pfLog'); log.innerHTML='';
+    for(let i=0;i<=pf.step;i++){
+      const it=document.createElement('div');
+      it.className='item'+(i===pf.step?' cur':'');
+      it.innerHTML='<span class="n">'+(i+1)+'</span>';
+      const sp=document.createElement('span'); sp.textContent=def.steps[i];
+      it.appendChild(sp); log.appendChild(it);
+    }
+    const last=log.lastElementChild; if(last) last.scrollIntoView({block:'nearest'});
     const dots=document.getElementById('pfDots'); dots.innerHTML='';
     for(let i=0;i<n;i++){ const d=document.createElement('i'); if(i<=pf.step) d.className='on'; dots.appendChild(d); }
     document.getElementById('pfPrev').disabled = pf.step===0;
@@ -1139,14 +1327,16 @@
     pf.step=Math.max(0, Math.min(n-1, pf.step+d));
     pfRender();
   }
-  function pfReset(){ pf.step=0; pf.flip=0; pf.move=0; pfRender(); }
-  function pfSetType(t){ pf.type=t; pf.step=0; pf.flip=0; pf.move=0; pfSyncPicker(); pfRender(); }
+  function pfReset(){ pf.step=0; pf.flip=0; pf.move=0; pfStrokes=[]; pfCur=null; pfRender(); }
+  function pfSetType(t){ pf.type=t; pf.step=0; pf.flip=0; pf.move=0; pfStrokes=[]; pfCur=null; pfSyncPicker(); pfRender(); }
   function pfSyncPicker(){
     document.querySelectorAll('#pfPicker .chip').forEach(b=>b.classList.toggle('on', b.dataset.t===pf.type));
   }
   function pfRenderPicker(){
     const box=document.getElementById('pfPicker'); box.innerHTML='';
-    Object.keys(PROOFS).forEach(k=>{
+    const keys=(CONFIG.proof||[]).filter(k=>PROOFS[k]);
+    if(keys.length<2){ box.style.display='none'; return; }   // 증명이 하나뿐이면 선택칩 숨김
+    keys.forEach(k=>{
       const b=document.createElement('button');
       b.className='chip'; b.dataset.t=k; b.textContent=PROOFS[k].name;
       b.onclick=()=>pfSetType(k); box.appendChild(b);
@@ -1157,7 +1347,7 @@
     if(!pfCv||!pfWrap) return;
     const w=pfWrap.clientWidth, h=pfWrap.clientHeight;
     if(!w||!h) return;
-    if(pfCv.width===w && pfCv.height===h){ pfDraw(); return; }
+    if(pfW===w && pfH===h){ pfDraw(); return; }
     pfCv.width=w; pfCv.height=h; pfW=w; pfH=h; pfDraw();
   }
 
@@ -1339,12 +1529,21 @@
     exCv=document.getElementById('ex'); exCtx=exCv.getContext('2d'); exWrap=document.getElementById('exwrap');
     pfCv=document.getElementById('pf'); pfCtx=pfCv.getContext('2d'); pfWrap=document.getElementById('pfwrap');
 
-    // 증명 화면은 CONFIG.proof가 있는 소단원에서만 보인다
-    if(CONFIG.proof){
+    // 증명 화면은 교사에게만 보인다 (학생이 먼저 넘겨보지 못하도록)
+    const proofKeys=(CONFIG.proof||[]).filter(k=>PROOFS[k]);
+    if(isTeacher && proofKeys.length){
       document.getElementById('tabProof').style.display='';
-      pf.type = CONFIG.proof==='rha' ? 'rha' : 'rhs';
+      pf.type=proofKeys[0];
       pfRenderPicker(); pfRender();
     }
+
+    // 증명 화면 필기 입력
+    pfCv.addEventListener('mousedown',pfDown);
+    pfCv.addEventListener('mousemove',pfMove);
+    window.addEventListener('mouseup',pfUp);
+    pfCv.addEventListener('touchstart',e=>{e.preventDefault(); pfDown(e);},{passive:false});
+    pfCv.addEventListener('touchmove',e=>{e.preventDefault(); pfMove(e);},{passive:false});
+    pfCv.addEventListener('touchend',e=>{e.preventDefault(); pfUp();},{passive:false});
 
     document.getElementById('exTitle').textContent=exDef.title;
     document.getElementById('exSub').textContent=exDef.sub;
