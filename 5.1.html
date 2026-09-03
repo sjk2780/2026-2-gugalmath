@@ -1217,9 +1217,9 @@
       pfRight(g.F, sub(g.D,g.F), sub(g.E,g.F));
       pfLabel(g.A,'A',ink,0,-20); pfLabel(g.B,'B',ink,-20,14); pfLabel(g.C,'C',ink,18,14);
       pfLabel(g.D,'D',teal,0,-20); pfLabel(g.E,'E',teal,-20,14); pfLabel(g.F,'F',teal,18,14);
-      pfTick(g.A,g.B,2); pfTick(g.D,g.E,2,teal);                       // AB = DE
-      if(s>=0){ pfArc(g.B,g.A,g.C,34,blue,'∠B'); pfArc(g.E,g.D,g.F,34,blue,'∠E'); }
-      if(s>=1){ pfArc(g.A,g.B,g.C,34,red,'∠A'); pfArc(g.D,g.E,g.F,34,red,'∠D'); }
+      // 주어진 조건만 표시한다(AB = DE, ∠B = ∠E). 나머지는 교사가 펜으로.
+      pfTick(g.A,g.B,2); pfTick(g.D,g.E,2,teal);
+      pfArc(g.B,g.A,g.C,34,blue,'∠B'); pfArc(g.E,g.D,g.F,34,blue,'∠E');
       pfInkPaint();
       return;
     }
@@ -1243,17 +1243,7 @@
       pfLabel(g.D,'D',teal,0,-22); pfLabel(g.F,'F',teal,18,20);
     }
 
-    if(s===3 && joined){                              // 180° 강조
-      pfArc(g.C,g.B,g.A,30,red,'90°'); pfArc(g.C,g.A,g.E,30,red,'90°');
-      pfSeg(g.B,g.E,red,2.5,[8,6]);
-    }
-    if(s>=4 && joined){                               // △ABE 이등변
-      pfSeg(g.B,g.E,ink,3);
-      pfCtx.save(); pfCtx.fillStyle='rgba(13,148,136,.10)';
-      pfCtx.beginPath(); pfCtx.moveTo(g.A.x,g.A.y); pfCtx.lineTo(g.B.x,g.B.y); pfCtx.lineTo(g.E.x,g.E.y);
-      pfCtx.closePath(); pfCtx.fill(); pfCtx.restore();
-    }
-    if(s>=5 && joined){ pfArc(g.B,g.A,g.E,34,blue,'∠B'); pfArc(g.E,g.A,g.B,34,blue,'∠E'); }
+    // 유도되는 표시(180°, 이등변 강조, ∠B=∠E 등)는 그리지 않는다 — 교사가 펜으로.
     pfInkPaint();
   }
 
@@ -1266,19 +1256,7 @@
     pfArc(A,B,D,44,teal); pfArc(A,D,C,52,teal);         // ∠BAD = ∠CAD
     pfLabel(A,'A',ink,0,-24); pfLabel(B,'B',ink,-24,12); pfLabel(C,'C',ink,24,12);
     pfLabel(D,'D',teal,0,28);
-    if(s>=1){                                            // 공통인 변 AD 강조
-      pfSeg(A,D,blue,4); pfTick(A,D,3,blue);
-    }
-    if(s>=2){                                            // 합동인 두 삼각형
-      pfCtx.save(); pfCtx.fillStyle='rgba(37,99,235,.08)';
-      pfCtx.beginPath(); pfCtx.moveTo(A.x,A.y); pfCtx.lineTo(B.x,B.y); pfCtx.lineTo(D.x,D.y); pfCtx.closePath(); pfCtx.fill();
-      pfCtx.fillStyle='rgba(13,148,136,.10)';
-      pfCtx.beginPath(); pfCtx.moveTo(A.x,A.y); pfCtx.lineTo(D.x,D.y); pfCtx.lineTo(C.x,C.y); pfCtx.closePath(); pfCtx.fill();
-      pfCtx.restore();
-    }
-    if(s>=3){ pfArc(B,A,C,38,red,'∠B'); pfArc(C,B,A,38,red,'∠C'); }
-    if(s>=4){ pfRight(D, sub(A,D), sub(C,D), red); }
-    if(s>=5){ pfTick(B,D,2,red); pfTick(D,C,2,red); }
+    // 주어진 조건(AB = AC, ∠A의 이등분선)만 표시. 나머지는 교사가 펜으로.
     pfInkPaint();
   }
 
@@ -1295,14 +1273,7 @@
     pfSeg(O,Mca,teal,2.4,[7,5]); pfTick(C,Mca,1,teal); pfTick(Mca,A,1,teal);
     pfRight(Mca, sub(O,Mca), sub(A,Mca), teal);
     pfDot2(O,red,6); pfLabel(O,'O',red,16,-14);
-    if(s>=1){ pfSeg(O,B,blue,2.6); pfSeg(O,C,blue,2.6); }
-    if(s>=2){ pfSeg(O,A,blue,2.6); }
-    if(s>=3){ pfTick(O,A,1,blue); pfTick(O,B,1,blue); pfTick(O,C,1,blue); }
-    if(s>=4){
-      pfSeg(O,D,red,2.6); pfDot2(D,red,4.5); pfLabel(D,'D',red,-16,-12);
-      pfRight(D, sub(O,D), sub(B,D), red);
-    }
-    if(s>=5){ pfTick(A,D,2,red); pfTick(D,B,2,red); }
+    // 주어진 조건(두 변의 수직이등분선과 그 교점 O)만 표시. OA·OB·OC 등은 교사가 펜으로.
     pfInkPaint();
   }
 
@@ -1323,12 +1294,12 @@
     pfArc(B,I,A,40,teal); pfArc(B,C,I,48,teal);
     pfDot2(I,red,6); pfLabel(I,'I',red,16,-14);
     pfLabel(D,'D',blue,-16,-8); pfLabel(E,'E',blue,0,24); pfLabel(F,'F',blue,18,-8);
-    if(s>=1){ pfSeg(I,D,blue,2.6); pfSeg(I,F,blue,2.6);
-      pfRight(D, sub(I,D), sub(B,D), blue); pfRight(F, sub(I,F), sub(A,F), blue); }
-    if(s>=2){ pfSeg(I,E,blue,2.6); pfRight(E, sub(I,E), sub(C,E), blue); }
-    if(s>=3){ pfTick(I,D,1,blue); pfTick(I,E,1,blue); pfTick(I,F,1,blue); }
-    if(s>=4){ pfSeg(I,C,red,2.6); }
-    if(s>=5){ pfArc(C,E,I,40,red); pfArc(C,I,F,48,red); }
+    // 처음 조건: I에서 세 변에 내린 수선(=수선의 발 D, E, F)까지가 주어진 상태
+    pfSeg(I,D,blue,2.6); pfSeg(I,E,blue,2.6); pfSeg(I,F,blue,2.6);
+    pfRight(D, sub(I,D), sub(B,D), blue);
+    pfRight(E, sub(I,E), sub(C,E), blue);
+    pfRight(F, sub(I,F), sub(A,F), blue);
+    // ID=IE=IF 표시, IC, ∠ICE=∠ICF 등은 그리지 않는다 — 교사가 펜으로.
     pfInkPaint();
   }
   function pfDot2(p,color,r){
