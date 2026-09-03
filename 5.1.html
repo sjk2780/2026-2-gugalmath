@@ -114,6 +114,18 @@
   .exnote{margin-top:12px; font-size:14px; color:var(--ok); background:var(--okbg); border:1px solid #A7F3D0; border-radius:9px; padding:10px 14px; display:none;}
   .exnote.show{display:block;}
 
+  /* 증명 보기 — 교실 앞에서 띄우므로 글씨를 크게 */
+  .pfstep{background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--blue); border-radius:10px; padding:16px 20px; margin-bottom:14px; min-height:86px;}
+  .pfnum{font-size:13px; font-weight:800; color:var(--blue); letter-spacing:.04em; margin-bottom:6px;}
+  .pftext{font-size:21px; line-height:1.55; white-space:pre-wrap; font-weight:500;}
+  /* 증명 캔버스는 프로젝터 화면에 맞게 가로로 넓게 */
+  #pfwrap{aspect-ratio:16/9;}
+  .pfnav{display:flex; align-items:center; gap:10px; margin-top:14px; flex-wrap:wrap;}
+  .pfdots{display:flex; gap:6px; margin:0 4px;}
+  .pfdots i{width:9px; height:9px; border-radius:50%; background:var(--line); display:block;}
+  .pfdots i.on{background:var(--blue);}
+  @media(max-width:600px){ .pftext{font-size:18px;} }
+
   /* 제출 영역 */
   .submit-row{display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:16px;}
   .submit-row select, .submit-row input{padding:11px 12px; border:1px solid var(--line); border-radius:8px; font-family:inherit; font-size:15px; outline:none;}
@@ -172,7 +184,7 @@
   <!-- 학생 탭 -->
   <div class="tabs" id="studentTabs">
     <button class="tab active" id="tabExplore" onclick="showView('explore')">탐구하기</button>
-    <button class="tab" id="tabSolve" onclick="showView('solve')">문제 풀기</button><button class="tab" id="tabDash" onclick="showView('dash')" style="display:none;">제출 현황</button>
+    <button class="tab" id="tabProof" onclick="showView('proof')" style="display:none;">증명 보기</button><button class="tab" id="tabSolve" onclick="showView('solve')">문제 풀기</button><button class="tab" id="tabDash" onclick="showView('dash')" style="display:none;">제출 현황</button>
   </div>
 
   <!-- ===== 학생: 탐구하기 ===== -->
@@ -201,6 +213,27 @@
       <input type="text" id="exName" placeholder="이름" style="width:120px;">
       <button class="btn-ghost" onclick="exReset()">처음으로</button>
       <button class="btn-primary" id="exSubmitBtn" onclick="submitExplore()">탐구 화면 제출</button>
+    </div>
+  </div>
+
+  <!-- ===== 증명 보기 (칠판 대신 화면으로 설명) ===== -->
+  <div id="viewProof" style="display:none;">
+    <div class="extools" id="pfPicker"></div>
+
+    <div class="pfstep">
+      <div class="pfnum" id="pfNum"></div>
+      <div class="pftext" id="pfText"></div>
+    </div>
+
+    <div class="sketch-wrap" id="pfwrap">
+      <canvas id="pf"></canvas>
+    </div>
+
+    <div class="pfnav">
+      <button class="btn-ghost" onclick="pfGo(-1)" id="pfPrev">← 이전</button>
+      <span class="pfdots" id="pfDots"></span>
+      <button class="btn-primary" onclick="pfGo(1)" id="pfNext" style="margin-left:0;">다음 →</button>
+      <button class="btn-ghost" onclick="pfReset()">처음부터</button>
     </div>
   </div>
 
@@ -952,18 +985,227 @@
     draw();
   }
 
+  /* ══════════════ 증명 보기 ══════════════ */
+  const PROOFS = {
+    rha: {
+      name:'빗변 + 한 예각 (RHA)',
+      steps:[
+        '∠C = ∠F = 90°인 두 직각삼각형 ABC와 DEF에서\nAB = DE, ∠B = ∠E 라고 하자.',
+        '삼각형의 세 내각의 크기의 합은 180°이므로\n∠A = 90° − ∠B,   ∠D = 90° − ∠E',
+        '∠B = ∠E 이므로   ∠A = ∠D',
+        '△ABC와 △DEF에서\nAB = DE,  ∠A = ∠D,  ∠B = ∠E\n따라서 △ABC ≡ △DEF (ASA 합동)',
+        '즉, 빗변의 길이가 같고 한 예각의 크기가 같은\n두 직각삼각형은 서로 합동이다.'
+      ]
+    },
+    rhs: {
+      name:'빗변 + 다른 한 변 (RHS)',
+      steps:[
+        '∠C = ∠F = 90°인 두 직각삼각형 ABC와 DEF에서\nAB = DE, AC = DF 라고 하자.',
+        '△DEF를 뒤집는다.',
+        'AC와 DF가 겹치도록 맞붙인다.',
+        '∠ACB + ∠DFE = 90° + 90° = 180°\n이므로 세 점 B, C, E는 한 직선 위에 있다.',
+        '△ABE에서 AB = AE 이므로\n△ABE는 이등변삼각형이다.',
+        '이등변삼각형의 두 밑각의 크기는 같으므로\n∠B = ∠E',
+        '따라서 두 직각삼각형 ABC와 DEF는\n빗변의 길이가 같고 한 예각의 크기가 같으므로\n△ABC ≡ △DEF',
+        '즉, 빗변의 길이가 같고 다른 한 변의 길이가 같은\n두 직각삼각형은 서로 합동이다.'
+      ]
+    }
+  };
+
+  let pfCv, pfCtx, pfWrap, pfW=0, pfH=0;
+  let pf={ type:'rhs', step:0, flip:0, move:0, anim:null };
+
+  function pfDef(){ return PROOFS[pf.type]; }
+
+  // 단계별 목표 상태(뒤집기 진행도, 이동 진행도)
+  function pfTarget(step){
+    if(pf.type!=='rhs') return {flip:0, move:0};
+    if(step<=0) return {flip:0, move:0};
+    if(step===1) return {flip:1, move:0};
+    return {flip:1, move:1};
+  }
+
+  function pfGeom(){
+    const a=pfH*0.52, b=pfW*0.21;          // AC(세로), BC(가로)
+    // 맞붙인 뒤의 △ABE가 화면 가운데 오도록 C를 한가운데 둔다
+    const cx=pfW*0.50, cy=pfH*0.80;        // △ABC의 직각 꼭짓점 C
+    const fx=pfW*0.88, fy=pfH*0.80;        // △DEF의 직각 꼭짓점 F(시작 위치)
+    const A={x:cx, y:cy-a}, B={x:cx-b, y:cy}, C={x:cx, y:cy};
+    // DEF: 시작은 ABC와 같은 방향, F를 기준으로 좌우 뒤집기 → C로 평행이동
+    const raw={ D:{x:fx, y:fy-a}, E:{x:fx-b, y:fy}, F:{x:fx, y:fy} };
+    const s=1-2*pf.flip;                                   // 1 → -1
+    const ox=(cx-fx)*pf.move, oy=(cy-fy)*pf.move;
+    const t=p=>({ x: fx+(p.x-fx)*s+ox, y: p.y+oy });
+    return { A,B,C, D:t(raw.D), E:t(raw.E), F:t(raw.F), a, b };
+  }
+
+  function pfDrawTri(P,Q,R,color,width){
+    exCtxSet(pfCtx);
+    pfSeg(P,Q,color,width); pfSeg(Q,R,color,width); pfSeg(R,P,color,width);
+  }
+  function exCtxSet(c){ c.lineCap='round'; c.lineJoin='round'; }
+  function pfSeg(p,q,color,width,dash){
+    pfCtx.save(); pfCtx.strokeStyle=color; pfCtx.lineWidth=width||3; pfCtx.lineCap='round';
+    if(dash) pfCtx.setLineDash(dash);
+    pfCtx.beginPath(); pfCtx.moveTo(p.x,p.y); pfCtx.lineTo(q.x,q.y); pfCtx.stroke(); pfCtx.restore();
+  }
+  function pfLabel(p,text,color,dx,dy,size){
+    pfCtx.save(); pfCtx.fillStyle=color||'#1A1A1A';
+    pfCtx.font='700 '+(size||20)+'px Pretendard, sans-serif';
+    pfCtx.textAlign='center'; pfCtx.textBaseline='middle';
+    pfCtx.fillText(text, p.x+(dx||0), p.y+(dy||0)); pfCtx.restore();
+  }
+  function pfRight(P,u,v,color){
+    const s=15, a=add(P,mul(norm(u),s)), b=add(P,mul(norm(v),s)), c=add(a,mul(norm(v),s));
+    pfSeg(a,c,color||'#DC2626',2); pfSeg(c,b,color||'#DC2626',2);
+  }
+  function pfTick(p,q,n,color){
+    const m=mid(p,q), u=norm(sub(q,p)), w=perp(u);
+    for(let i=0;i<n;i++){
+      const c=add(m, mul(u,(i-(n-1)/2)*6));
+      pfSeg(add(c,mul(w,8)), add(c,mul(w,-8)), color||'#DC2626', 2.5);
+    }
+  }
+  function pfArc(P,X,Y,r,color,label){
+    const a1=Math.atan2(X.y-P.y,X.x-P.x), a2=Math.atan2(Y.y-P.y,Y.x-P.x);
+    let d=a2-a1; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI;
+    pfCtx.save(); pfCtx.strokeStyle=color; pfCtx.lineWidth=3;
+    pfCtx.beginPath(); pfCtx.arc(P.x,P.y,r,a1,a1+d,d<0); pfCtx.stroke(); pfCtx.restore();
+    if(label){
+      const am=a1+d/2;
+      pfLabel({x:P.x+Math.cos(am)*(r+20), y:P.y+Math.sin(am)*(r+20)}, label, color, 0,0, 17);
+    }
+  }
+
+  function pfDraw(){
+    if(!pfCtx) return;
+    pfCtx.clearRect(0,0,pfW,pfH);
+    pfCtx.fillStyle='#fff'; pfCtx.fillRect(0,0,pfW,pfH);
+    const g=pfGeom(), s=pf.step, ink='#1A1A1A', teal='#0D9488', blue='#2563EB', red='#DC2626';
+
+    if(pf.type==='rha'){
+      pfDrawTri(g.A,g.B,g.C,ink,3);
+      pfDrawTri(g.D,g.E,g.F,teal,3);
+      pfRight(g.C, sub(g.A,g.C), sub(g.B,g.C));
+      pfRight(g.F, sub(g.D,g.F), sub(g.E,g.F));
+      pfLabel(g.A,'A',ink,0,-20); pfLabel(g.B,'B',ink,-20,14); pfLabel(g.C,'C',ink,18,14);
+      pfLabel(g.D,'D',teal,0,-20); pfLabel(g.E,'E',teal,-20,14); pfLabel(g.F,'F',teal,18,14);
+      pfTick(g.A,g.B,2); pfTick(g.D,g.E,2,teal);                       // AB = DE
+      if(s>=0){ pfArc(g.B,g.A,g.C,34,blue,'∠B'); pfArc(g.E,g.D,g.F,34,blue,'∠E'); }
+      if(s>=1){ pfArc(g.A,g.B,g.C,34,red,'∠A'); pfArc(g.D,g.E,g.F,34,red,'∠D'); }
+      pfCtx.save();
+      pfCtx.font='700 18px Pretendard, sans-serif'; pfCtx.fillStyle=ink; pfCtx.textAlign='center';
+      if(s>=2) pfCtx.fillText('∠A = ∠D', pfW*0.5, pfH*0.16);
+      if(s>=3){ pfCtx.fillStyle=blue; pfCtx.fillText('△ABC ≡ △DEF', pfW*0.5, pfH*0.16+30); }
+      pfCtx.restore();
+      return;
+    }
+
+    // ── RHS ──
+    pfDrawTri(g.A,g.B,g.C,ink,3);
+    pfDrawTri(g.D,g.E,g.F,teal,3);
+    pfRight(g.C, sub(g.A,g.C), sub(g.B,g.C));
+    pfRight(g.F, sub(g.D,g.F), sub(g.E,g.F), teal);
+    pfTick(g.A,g.B,2); pfTick(g.D,g.E,2,teal);        // AB = DE (빗변)
+    pfTick(g.A,g.C,1,blue); pfTick(g.D,g.F,1,blue);   // AC = DF
+
+    const joined = pf.move>0.98;
+    pfLabel(g.B,'B',ink,-22,14);
+    pfLabel(g.E,'E',teal,22,14);
+    if(joined){
+      pfLabel(g.A,'A(D)',ink,0,-22);
+      pfLabel(g.C,'C(F)',ink,0,26);
+    } else {
+      pfLabel(g.A,'A',ink,0,-22); pfLabel(g.C,'C',ink,18,20);
+      pfLabel(g.D,'D',teal,0,-22); pfLabel(g.F,'F',teal,18,20);
+    }
+
+    if(s===3 && joined){                              // 180° 강조
+      pfArc(g.C,g.B,g.A,30,red,'90°'); pfArc(g.C,g.A,g.E,30,red,'90°');
+      pfSeg(g.B,g.E,red,2.5,[8,6]);
+    }
+    if(s>=4 && joined){                               // △ABE 이등변
+      pfSeg(g.B,g.E,ink,3);
+      pfCtx.save(); pfCtx.fillStyle='rgba(13,148,136,.10)';
+      pfCtx.beginPath(); pfCtx.moveTo(g.A.x,g.A.y); pfCtx.lineTo(g.B.x,g.B.y); pfCtx.lineTo(g.E.x,g.E.y);
+      pfCtx.closePath(); pfCtx.fill(); pfCtx.restore();
+    }
+    if(s>=5 && joined){ pfArc(g.B,g.A,g.E,34,blue,'∠B'); pfArc(g.E,g.A,g.B,34,blue,'∠E'); }
+    pfCtx.save();
+    pfCtx.font='700 19px Pretendard, sans-serif'; pfCtx.textAlign='center';
+    if(s>=4 && joined){ pfCtx.fillStyle=ink; pfCtx.fillText('AB = AE  →  △ABE는 이등변삼각형', pfW*0.5, pfH*0.13); }
+    if(s>=5 && joined){ pfCtx.fillStyle=blue; pfCtx.fillText('∠B = ∠E', pfW*0.5, pfH*0.13+30); }
+    if(s>=6 && joined){ pfCtx.fillStyle=blue; pfCtx.fillText('△ABC ≡ △DEF', pfW*0.5, pfH*0.13+60); }
+    pfCtx.restore();
+  }
+
+  function pfAnimateTo(step){
+    const from={flip:pf.flip, move:pf.move}, to=pfTarget(step);
+    if(from.flip===to.flip && from.move===to.move){ pf.flip=to.flip; pf.move=to.move; pfDraw(); return; }
+    if(pf.anim) cancelAnimationFrame(pf.anim);
+    const t0=performance.now(), dur=700;
+    const tick=now=>{
+      const k=Math.min(1,(now-t0)/dur), e=k<0.5?2*k*k:1-Math.pow(-2*k+2,2)/2;  // easeInOut
+      pf.flip=from.flip+(to.flip-from.flip)*e;
+      pf.move=from.move+(to.move-from.move)*e;
+      pfDraw();
+      if(k<1) pf.anim=requestAnimationFrame(tick); else pf.anim=null;
+    };
+    pf.anim=requestAnimationFrame(tick);
+  }
+
+  function pfRender(){
+    const def=pfDef(), n=def.steps.length;
+    document.getElementById('pfNum').textContent='단계 '+(pf.step+1)+' / '+n+'  ·  '+def.name;
+    document.getElementById('pfText').textContent=def.steps[pf.step];
+    const dots=document.getElementById('pfDots'); dots.innerHTML='';
+    for(let i=0;i<n;i++){ const d=document.createElement('i'); if(i<=pf.step) d.className='on'; dots.appendChild(d); }
+    document.getElementById('pfPrev').disabled = pf.step===0;
+    document.getElementById('pfNext').disabled = pf.step===n-1;
+    pfAnimateTo(pf.step);
+  }
+  function pfGo(d){
+    const n=pfDef().steps.length;
+    pf.step=Math.max(0, Math.min(n-1, pf.step+d));
+    pfRender();
+  }
+  function pfReset(){ pf.step=0; pf.flip=0; pf.move=0; pfRender(); }
+  function pfSetType(t){ pf.type=t; pf.step=0; pf.flip=0; pf.move=0; pfSyncPicker(); pfRender(); }
+  function pfSyncPicker(){
+    document.querySelectorAll('#pfPicker .chip').forEach(b=>b.classList.toggle('on', b.dataset.t===pf.type));
+  }
+  function pfRenderPicker(){
+    const box=document.getElementById('pfPicker'); box.innerHTML='';
+    Object.keys(PROOFS).forEach(k=>{
+      const b=document.createElement('button');
+      b.className='chip'; b.dataset.t=k; b.textContent=PROOFS[k].name;
+      b.onclick=()=>pfSetType(k); box.appendChild(b);
+    });
+    pfSyncPicker();
+  }
+  function pfResize(){
+    if(!pfCv||!pfWrap) return;
+    const w=pfWrap.clientWidth, h=pfWrap.clientHeight;
+    if(!w||!h) return;
+    if(pfCv.width===w && pfCv.height===h){ pfDraw(); return; }
+    pfCv.width=w; pfCv.height=h; pfW=w; pfH=h; pfDraw();
+  }
+
   /* ══════════════ 화면 전환 ══════════════ */
   let currentView='explore';
   function showView(v){
     currentView=v;
     document.getElementById('tabExplore').classList.toggle('active', v==='explore');
+    document.getElementById('tabProof').classList.toggle('active', v==='proof');
     document.getElementById('tabSolve').classList.toggle('active', v==='solve');
     document.getElementById('tabDash').classList.toggle('active', v==='dash');
     document.getElementById('viewExplore').style.display = v==='explore'?'block':'none';
+    document.getElementById('viewProof').style.display   = v==='proof'?'block':'none';
     document.getElementById('viewSolve').style.display   = v==='solve'?'block':'none';
     document.getElementById('viewDash').style.display    = v==='dash'?'block':'none';
     if(v==='explore') setTimeout(exResize,0);
     if(v==='solve')   setTimeout(resize,0);
+    if(v==='proof')   setTimeout(()=>{ pfResize(); pfRender(); },0);
   }
 
   /* ══════════════ 제출 ══════════════ */
@@ -1125,6 +1367,14 @@
 
     cv=document.getElementById('cv'); ctx=cv.getContext('2d'); skwrap=document.getElementById('skwrap');
     exCv=document.getElementById('ex'); exCtx=exCv.getContext('2d'); exWrap=document.getElementById('exwrap');
+    pfCv=document.getElementById('pf'); pfCtx=pfCv.getContext('2d'); pfWrap=document.getElementById('pfwrap');
+
+    // 증명 화면은 CONFIG.proof가 있는 소단원에서만 보인다
+    if(CONFIG.proof){
+      document.getElementById('tabProof').style.display='';
+      pf.type = CONFIG.proof==='rha' ? 'rha' : 'rhs';
+      pfRenderPicker(); pfRender();
+    }
 
     document.getElementById('exTitle').textContent=exDef.title;
     document.getElementById('exSub').textContent=exDef.sub;
@@ -1155,13 +1405,14 @@
     if(typeof ResizeObserver!=='undefined'){
       new ResizeObserver(()=>resize()).observe(skwrap);
       new ResizeObserver(()=>exResize()).observe(exWrap);
+      new ResizeObserver(()=>pfResize()).observe(pfWrap);
     }
-    resize(); exResize();
-    requestAnimationFrame(()=>{ resize(); exResize(); });
-    setTimeout(()=>{ resize(); exResize(); }, 300);
+    resize(); exResize(); pfResize();
+    requestAnimationFrame(()=>{ resize(); exResize(); pfResize(); });
+    setTimeout(()=>{ resize(); exResize(); pfResize(); }, 300);
   };
 
-  window.addEventListener('resize', ()=>{ resize(); exResize(); });
+  window.addEventListener('resize', ()=>{ resize(); exResize(); pfResize(); });
 </script>
 </body>
 </html>
