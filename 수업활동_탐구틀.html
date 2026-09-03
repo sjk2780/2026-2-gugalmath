@@ -85,16 +85,25 @@
   .exnote.show{display:block;}
 
   /* 증명 보기 — 교실 앞에서 띄우므로 글씨를 크게 */
-  .pfnum{font-size:14px; font-weight:800; color:var(--blue); letter-spacing:.04em; margin-bottom:10px;}
-  /* 다음을 누를 때마다 증명 과정이 아래에 쌓인다 */
-  .pflog{background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--blue); border-radius:10px; padding:6px 20px; margin-top:16px;}
-  .pflog .item{display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px dashed var(--line);
-               font-size:20px; line-height:1.55; white-space:pre-wrap; color:var(--sub);}
+  .pfnum{font-size:14px; font-weight:800; color:var(--blue); letter-spacing:.04em; margin-bottom:8px;}
+  /* TV로 학생이 보는 화면 — 스크롤 없이 한 화면에 도형+증명이 다 들어와야 한다 */
+  .pfmain{display:grid; grid-template-columns:1.32fr 1fr; gap:16px; align-items:stretch;
+          height:calc(100vh - 286px); min-height:340px;}
+  /* 증명 화면일 때는 TV 화면을 꽉 쓰고, 세로 스크롤이 생기지 않게 여백을 줄인다 */
+  body.proofmode .wrap{max-width:1720px; padding-bottom:14px;}
+  body.proofmode header.top{margin-bottom:10px;}
+  body.proofmode .tabs{margin-bottom:12px;}
+  /* 다음을 누를 때마다 증명 과정이 오른쪽에 쌓인다 */
+  .pflog{background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--blue);
+         border-radius:10px; padding:4px 20px; height:100%; overflow-y:auto;}
+  .pflog .item{display:flex; gap:12px; align-items:flex-start; padding:11px 0; border-bottom:1px dashed var(--line);
+               font-size:clamp(16px, 1.32vw, 23px); line-height:1.5; white-space:pre-wrap; color:var(--sub);}
   .pflog .item:last-child{border-bottom:none;}
   .pflog .item.cur{color:var(--ink); font-weight:600;}
-  .pflog .n{flex:none; min-width:24px; font-size:14px; font-weight:800; color:var(--blue); padding-top:5px;}
-  /* 증명 캔버스는 프로젝터 화면에 맞게 가로로 넓게 */
-  #pfwrap{aspect-ratio:16/9;}
+  .pflog .n{flex:none; min-width:22px; font-size:14px; font-weight:800; color:var(--blue); padding-top:4px;}
+  @media(max-width:760px){ .pfmain{grid-template-columns:1fr; height:auto;} #pfwrap{aspect-ratio:16/9;} }
+  /* 증명 캔버스는 왼쪽 칸을 꽉 채운다(높이는 .pfmain이 결정) */
+  #pfwrap{aspect-ratio:auto; height:100%;}
   .pfnav{display:flex; align-items:center; gap:10px; margin-top:14px; flex-wrap:wrap;}
   .pfdots{display:flex; gap:6px; margin:0 4px;}
   .pfdots i{width:9px; height:9px; border-radius:50%; background:var(--line); display:block;}
@@ -197,18 +206,23 @@
 
     <div class="pfnum" id="pfNum"></div>
 
-    <div class="sketch-wrap" id="pfwrap">
-      <canvas id="pf"></canvas>
-      <div class="sketch-tools" id="pfTools">
-        <div class="sk-colors">
-          <div class="sk-dot active" style="background:#DC2626" onclick="pfSetPen('#DC2626',this)"></div>
-          <div class="sk-dot" style="background:#2563EB" onclick="pfSetPen('#2563EB',this)"></div>
-          <div class="sk-dot" style="background:#1A1A1A" onclick="pfSetPen('#1A1A1A',this)"></div>
+    <!-- TV 화면 기준: 왼쪽 도형 / 오른쪽 증명 과정 (스크롤 없이 한 화면) -->
+    <div class="pfmain">
+      <div class="sketch-wrap" id="pfwrap">
+        <canvas id="pf"></canvas>
+        <div class="sketch-tools" id="pfTools">
+          <div class="sk-colors">
+            <div class="sk-dot active" style="background:#DC2626" onclick="pfSetPen('#DC2626',this)"></div>
+            <div class="sk-dot" style="background:#2563EB" onclick="pfSetPen('#2563EB',this)"></div>
+            <div class="sk-dot" style="background:#1A1A1A" onclick="pfSetPen('#1A1A1A',this)"></div>
+          </div>
+          <button class="sk-btn" id="pfEraserBtn" onclick="pfToggleEraser()">지우개</button>
+          <button class="sk-btn" onclick="pfUndo()">되돌리기</button>
+          <button class="sk-btn" onclick="pfClearInk()">필기 지우기</button>
         </div>
-        <button class="sk-btn" id="pfEraserBtn" onclick="pfToggleEraser()">지우개</button>
-        <button class="sk-btn" onclick="pfUndo()">되돌리기</button>
-        <button class="sk-btn" onclick="pfClearInk()">필기 지우기</button>
       </div>
+
+      <div class="pflog" id="pfLog"></div>
     </div>
 
     <div class="pfnav">
@@ -217,8 +231,6 @@
       <button class="btn-primary" onclick="pfGo(1)" id="pfNext" style="margin-left:0;">다음 →</button>
       <button class="btn-ghost" onclick="pfReset()">처음부터</button>
     </div>
-
-    <div class="pflog" id="pfLog"></div>
   </div>
 
   <!-- ===== 학생: 문제 풀기 ===== -->
@@ -1090,20 +1102,25 @@
 
   // 5.1 / 5.3 / 5.4 증명용 삼각형 배치
   function pfTri(){
-    const cx=pfW*0.50, top=pfH*0.14, bot=pfH*0.84;
-    const half=pfW*0.19;
+    // 칸의 가로·세로 어느 쪽이 짧아도 삼각형이 찌그러지지 않도록 둘 다 반영
+    const half=Math.min(pfW*0.30, pfH*0.30);
+    const hgt =Math.min(pfH*0.62, pfW*0.62);
+    const cx=pfW*0.50, cy=pfH*0.52;
+    const top=cy-hgt*0.5, bot=cy+hgt*0.5;
     if(pf.type==='iso'){                    // 이등변삼각형(좌우대칭)
       return { A:{x:cx, y:top}, B:{x:cx-half, y:bot}, C:{x:cx+half, y:bot} };
     }
     // 외심/내심은 일반 삼각형(예각)이어야 관찰이 자연스럽다
-    return { A:{x:cx-pfW*0.04, y:top}, B:{x:cx-half*1.15, y:bot}, C:{x:cx+half*1.1, y:bot} };
+    return { A:{x:cx-half*0.25, y:top}, B:{x:cx-half*1.06, y:bot}, C:{x:cx+half*1.02, y:bot} };
   }
 
   function pfGeom(){
-    const a=pfH*0.52, b=pfW*0.21;          // AC(세로), BC(가로)
-    // 맞붙인 뒤의 △ABE가 화면 가운데 오도록 C를 한가운데 둔다
-    const cx=pfW*0.50, cy=pfH*0.80;        // △ABC의 직각 꼭짓점 C
-    const fx=pfW*0.88, fy=pfH*0.80;        // △DEF의 직각 꼭짓점 F(시작 위치)
+    // 세로로 긴 칸에서도 삼각형이 홀쭉해지지 않도록 a를 b에 묶어 둔다
+    const b=Math.min(pfW*0.21, pfH*0.30);  // BC(가로)
+    const a=Math.min(pfH*0.52, b*1.9);     // AC(세로)
+    // 맞붙인 뒤의 △ABE가 화면 한가운데(가로·세로 모두) 오도록
+    const cx=pfW*0.50, cy=pfH*0.5+a*0.5;   // △ABC의 직각 꼭짓점 C
+    const fx=pfW*0.88, fy=cy;              // △DEF의 직각 꼭짓점 F(시작 위치)
     const A={x:cx, y:cy-a}, B={x:cx-b, y:cy}, C={x:cx, y:cy};
     // DEF: 시작은 ABC와 같은 방향, F를 기준으로 좌우 뒤집기 → C로 평행이동
     const raw={ D:{x:fx, y:fy-a}, E:{x:fx-b, y:fy}, F:{x:fx, y:fy} };
@@ -1292,7 +1309,14 @@
     const from={flip:pf.flip, move:pf.move}, to=pfTarget(step);
     if(from.flip===to.flip && from.move===to.move){ pf.flip=to.flip; pf.move=to.move; pfDraw(); return; }
     if(pf.anim) cancelAnimationFrame(pf.anim);
+    // 탭이 가려져 있으면 rAF가 멈추므로 바로 목표 상태로
+    if(document.hidden){ pf.flip=to.flip; pf.move=to.move; pfDraw(); return; }
     const t0=performance.now(), dur=700;
+    // 안전장치: 애니메이션이 끝까지 못 돌아도 목표 상태는 반드시 맞춘다
+    clearTimeout(pf.safety);
+    pf.safety=setTimeout(()=>{
+      if(pf.flip!==to.flip || pf.move!==to.move){ pf.flip=to.flip; pf.move=to.move; pfDraw(); }
+    }, dur+200);
     const tick=now=>{
       const k=Math.min(1,(now-t0)/dur), e=k<0.5?2*k*k:1-Math.pow(-2*k+2,2)/2;  // easeInOut
       pf.flip=from.flip+(to.flip-from.flip)*e;
@@ -1363,6 +1387,7 @@
     document.getElementById('viewProof').style.display   = v==='proof'?'block':'none';
     document.getElementById('viewSolve').style.display   = v==='solve'?'block':'none';
     document.getElementById('viewDash').style.display    = v==='dash'?'block':'none';
+    document.body.classList.toggle('proofmode', v==='proof');
     if(v==='explore') setTimeout(exResize,0);
     if(v==='solve')   setTimeout(resize,0);
     if(v==='proof')   setTimeout(()=>{ pfResize(); pfRender(); },0);
