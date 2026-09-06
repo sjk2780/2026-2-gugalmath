@@ -120,6 +120,9 @@
   .pflog .item:last-child{border-bottom:none;}
   .pflog .item.cur{color:var(--ink); font-weight:600;}
   .pflog .n{flex:none; min-width:22px; font-size:14px; font-weight:800; color:var(--blue); padding-top:4px;}
+  /* 단계가 많은 증명은 글자·간격을 줄여 스크롤 없이 한 화면에 담는다 */
+  .pflog.dense .item{font-size:clamp(14px, 1.02vw, 18px); padding:7px 0; line-height:1.45;}
+  .pflog.dense .n{font-size:12px; padding-top:3px;}
   @media(max-width:760px){ .pfmain{grid-template-columns:1fr; height:auto;} #pfwrap{aspect-ratio:16/9;} }
   /* 증명 캔버스는 왼쪽 칸을 꽉 채운다(높이는 .pfmain이 결정) */
   #pfwrap{aspect-ratio:auto; height:100%;}
@@ -1038,7 +1041,7 @@
       ]
     },
     circum: {
-      name:'세 변의 수직이등분선은 한 점에서 만난다',
+      name:'세 변의 수직이등분선 → 외접원과 외심',
       steps:[
         '△ABC에서 두 변 BC와 CA의 수직이등분선의\n교점을 O라고 하자.',
         '점 O는 BC의 수직이등분선 위에 있으므로\nOB = OC',
@@ -1046,11 +1049,15 @@
         '따라서   OA = OB = OC',
         '점 O에서 AB에 내린 수선의 발을 D라고 하자.\n△OAD와 △OBD에서\n∠ODA = ∠ODB = 90°,  OA = OB,  OD는 공통인 변',
         '따라서 △OAD ≡ △OBD (RHS 합동)\n그러므로   AD = BD',
-        '즉 OD는 AB의 수직이등분선이므로,\n△ABC의 세 변의 수직이등분선은 한 점 O에서 만난다.'
+        '즉 OD는 AB의 수직이등분선이므로,\n△ABC의 세 변의 수직이등분선은 한 점 O에서 만난다.',
+        '한편 OA = OB = OC 이므로, 점 O에서\n△ABC의 세 꼭짓점에 이르는 거리는 모두 같다.',
+        '따라서 점 O를 중심으로 하고 OA를 반지름으로 하는\n원을 그리면, 이 원은 △ABC의 세 꼭짓점을 모두 지난다.',
+        '이와 같이 원 O가 △ABC의 세 꼭짓점을 모두 지날 때,\n원 O는 △ABC에 외접한다고 한다.',
+        '이때 원 O를 △ABC의 외접원,\n원 O의 중심 O를 △ABC의 외심이라고 한다.'
       ]
     },
     incenter: {
-      name:'세 내각의 이등분선은 한 점에서 만난다',
+      name:'세 내각의 이등분선 → 내접원과 내심',
       steps:[
         '△ABC에서 ∠A와 ∠B의 이등분선의 교점을 I라 하고,\n점 I에서 세 변 AB, BC, CA에 내린 수선의 발을\n각각 D, E, F라고 하자.',
         '점 I는 ∠A의 이등분선 위에 있으므로\nID = IF',
@@ -1058,7 +1065,11 @@
         '따라서   ID = IE = IF',
         'IC를 그으면 △ICE와 △ICF에서\n∠IEC = ∠IFC = 90°,  IC는 공통인 변,  IE = IF',
         '따라서 △ICE ≡ △ICF (RHS 합동)\n그러므로   ∠ICE = ∠ICF',
-        '즉 IC는 ∠C의 이등분선이므로,\n△ABC의 세 내각의 이등분선은 한 점 I에서 만난다.'
+        '즉 IC는 ∠C의 이등분선이므로,\n△ABC의 세 내각의 이등분선은 한 점 I에서 만난다.',
+        '한편 ID = IE = IF 이므로, 점 I에서\n△ABC의 세 변에 이르는 거리는 모두 같다.',
+        '따라서 점 I를 중심으로 하고 ID를 반지름으로 하는\n원을 그리면, 이 원은 △ABC의 세 변에 모두 접한다.',
+        '이와 같이 원 I가 △ABC의 세 변에 모두 접할 때,\n원 I는 △ABC에 내접한다고 한다.',
+        '이때 원 I를 △ABC의 내접원,\n원 I의 중심 I를 △ABC의 내심이라고 한다.'
       ]
     }
   };
@@ -1123,7 +1134,9 @@
   function pfTri(){
     // 칸의 가로·세로 어느 쪽이 짧아도 삼각형이 찌그러지지 않도록 둘 다 반영
     const half=Math.min(pfW*0.30, pfH*0.30);
-    const hgt =Math.min(pfH*0.62, pfW*0.62);
+    // 외심/내심은 마지막에 외접원·내접원을 그리므로 삼각형을 조금 작게 잡아 원이 화면 안에 들어오게 한다
+    const kh  =(pf.type==='iso')?0.62:0.54;
+    const hgt =Math.min(pfH*kh, pfW*kh);
     const cx=pfW*0.50, cy=pfH*0.52;
     const top=cy-hgt*0.5, bot=cy+hgt*0.5;
     if(pf.type==='iso'){                    // 이등변삼각형(좌우대칭)
@@ -1261,7 +1274,9 @@
     pfSeg(O,Mca,teal,2.4,[7,5]); pfTick(C,Mca,1,teal); pfTick(Mca,A,1,teal);
     pfRight(Mca, sub(O,Mca), sub(A,Mca), teal);
     pfDot2(O,red,6); pfLabel(O,'O',red,16,-14);
-    // 주어진 조건(두 변의 수직이등분선과 그 교점 O)만 표시. OA·OB·OC 등은 교사가 펜으로.
+    // 증명 단계에서는 주어진 조건만 표시(OA·OB·OC 등은 교사가 펜으로).
+    // 외접원 개념을 도입하는 마지막 단계에서만 원을 그린다.
+    if(s>=8) pfCircleFull(O, dist(O,A), blue);
     pfInkPaint();
   }
 
@@ -1288,7 +1303,13 @@
     pfRight(E, sub(I,E), sub(C,E), blue);
     pfRight(F, sub(I,F), sub(A,F), blue);
     // ID=IE=IF 표시, IC, ∠ICE=∠ICF 등은 그리지 않는다 — 교사가 펜으로.
+    // 내접원 개념을 도입하는 마지막 단계에서만 원을 그린다.
+    if(s>=8) pfCircleFull(I, dist(I,E), blue);
     pfInkPaint();
+  }
+  function pfCircleFull(O,r,color){
+    pfCtx.save(); pfCtx.strokeStyle=color; pfCtx.lineWidth=2.6;
+    pfCtx.beginPath(); pfCtx.arc(O.x,O.y,r,0,Math.PI*2); pfCtx.stroke(); pfCtx.restore();
   }
   function pfDot2(p,color,r){
     pfCtx.save(); pfCtx.fillStyle=color;
@@ -1322,6 +1343,7 @@
     document.getElementById('pfNum').textContent='단계 '+(pf.step+1)+' / '+n+'  ·  '+def.name;
     // 지금까지의 과정을 아래에 쌓아 보여준다(칠판 판서처럼)
     const log=document.getElementById('pfLog'); log.innerHTML='';
+    log.classList.toggle('dense', n>9);
     for(let i=0;i<=pf.step;i++){
       const it=document.createElement('div');
       it.className='item'+(i===pf.step?' cur':'');
