@@ -219,6 +219,7 @@
             <div class="sk-dot" style="background:#2563EB" onclick="pfSetPen('#2563EB',this)"></div>
             <div class="sk-dot" style="background:#1A1A1A" onclick="pfSetPen('#1A1A1A',this)"></div>
           </div>
+          <button class="sk-btn" id="pfLineBtn" onclick="pfToggleLine()">직선</button>
           <button class="sk-btn" id="pfEraserBtn" onclick="pfToggleEraser()">지우개</button>
           <button class="sk-btn" onclick="pfUndo()">되돌리기</button>
           <button class="sk-btn" onclick="pfClearInk()">필기 지우기</button>
@@ -1037,6 +1038,47 @@
         '이때 원 O를 △ABC의 외접원,\n원 O의 중심 O를 △ABC의 외심이라고 한다.'
       ]
     },
+    // ── 교과서 예제 (교사가 화면으로 풀어 보이는 용도) ──
+    ex53a: {
+      name:'예제 1-(1)', img:'ex1',
+      steps:[
+        '점 O가 △ABC의 외심일 때, ∠x의 크기를 구하시오.',
+        'OA = OB = OC 이므로\n△OAB, △OBC, △OCA는 모두 이등변삼각형이다.',
+        '이등변삼각형의 두 밑각의 크기는 같으므로\n∠OAB = 40°,   ∠OBC = ∠x,   ∠OCA = 30°',
+        '△ABC에서 세 내각의 크기의 합은 180°이므로\n2(40° + ∠x + 30°) = 180°',
+        '따라서   ∠x = 20°'
+      ]
+    },
+    ex53b: {
+      name:'예제 1-(2)', img:'ex2',
+      steps:[
+        '점 O가 △ABC의 외심일 때, ∠x의 크기를 구하시오.',
+        'AO의 연장선과 BC의 교점을 D라고 하자.',
+        '△OAB, △OAC는 이등변삼각형이므로\n∠OAB = ∠OBA = ∠a,   ∠OAC = ∠OCA = ∠b\n라고 하자.',
+        '삼각형의 한 외각의 크기는 그와 이웃하지 않는\n두 내각의 크기의 합과 같으므로\n△OAB에서 ∠BOD = 2∠a,   △OAC에서 ∠COD = 2∠b',
+        '따라서   ∠x = 2∠a + 2∠b = 2(∠a + ∠b)',
+        '∠a + ∠b = ∠A = 70° 이므로\n∠x = 2 × 70° = 140°'
+      ]
+    },
+    ex54a: {
+      name:'예제 1-(1)', img:'ex1',
+      steps:[
+        '점 I가 △ABC의 내심일 때, ∠x의 크기를 구하시오.',
+        '점 I는 세 내각의 이등분선의 교점이므로\n∠IAB = ∠IAC = ∠x,   ∠IBC = ∠IBA = 20°,\n∠ICA = ∠ICB = 33°',
+        '△ABC에서 세 내각의 크기의 합은 180°이므로\n2(∠x + 20° + 33°) = 180°',
+        '따라서   ∠x = 37°'
+      ]
+    },
+    ex54b: {
+      name:'예제 1-(2)', img:'ex2',
+      steps:[
+        '점 I가 △ABC의 내심일 때, ∠x의 크기를 구하시오.',
+        '∠IBA = ∠IBC = ∠a,   ∠ICA = ∠ICB = ∠b\n라고 하면\n∠a = (1/2)∠B,   ∠b = (1/2)∠C',
+        '△IBC에서 세 내각의 크기의 합은 180°이므로\n∠x = 180° − (∠a + ∠b)',
+        '= 180° − (1/2)(∠B + ∠C)',
+        '△ABC에서 ∠B + ∠C = 180° − ∠A = 180° − 70° 이므로\n∠x = 180° − (1/2) × (180° − 70°) = 125°'
+      ]
+    },
     incenter: {
       name:'세 내각의 이등분선 → 내접원과 내심',
       steps:[
@@ -1058,8 +1100,20 @@
   let pfCv, pfCtx, pfWrap, pfW=0, pfH=0;
   let pf={ type:'rhs', step:0, flip:0, move:0, anim:null };
 
+  // 교과서 예제 그림 (CONFIG.proofImages에서 미리 읽어 둔다)
+  const pfImgs={};
+  function pfLoadImages(){
+    const src=CONFIG.proofImages||{};
+    Object.keys(src).forEach(k=>{
+      const im=new Image();
+      im.onload=()=>{ if(currentView==='proof') pfDraw(); };
+      im.src=src[k];
+      pfImgs[k]=im;
+    });
+  }
+
   /* ── 증명 화면 위에 직접 필기하는 펜 ── */
-  let pfStrokes=[], pfCur=null, pfPen='#DC2626', pfErase=false, pfDrag=false;
+  let pfStrokes=[], pfCur=null, pfPen='#DC2626', pfErase=false, pfLine=false, pfDrag=false;
   let pfInk=null, pfInkCtx=null;
   function pfInkPaint(){
     if(!pfW||!pfH) return;
@@ -1085,8 +1139,17 @@
     const t=e.touches&&e.touches[0]?e.touches[0]:e;
     return {x:t.clientX-r.left, y:t.clientY-r.top};
   }
-  function pfDown(e){ pfDrag=true; pfCur={color:pfPen, width:pfErase?26:3, erase:pfErase, pts:[pfPos(e)]}; pfDraw(); }
-  function pfMove(e){ if(!pfDrag||!pfCur) return; pfCur.pts.push(pfPos(e)); pfDraw(); }
+  function pfDown(e){
+    pfDrag=true; const p=pfPos(e);
+    pfCur={color:pfPen, width:pfErase?26:3, erase:pfErase, pts: pfLine?[p,p]:[p]};
+    pfDraw();
+  }
+  function pfMove(e){
+    if(!pfDrag||!pfCur) return;
+    const p=pfPos(e);
+    if(pfLine) pfCur.pts[1]=p; else pfCur.pts.push(p);
+    pfDraw();
+  }
   function pfUp(){ if(pfCur){ if(pfCur.pts.length) pfStrokes.push(pfCur); pfCur=null; pfDraw(); } pfDrag=false; }
   function pfSetPen(c,el){
     pfPen=c; pfErase=false;
@@ -1096,7 +1159,13 @@
   }
   function pfToggleEraser(){
     pfErase=!pfErase;
+    if(pfErase){ pfLine=false; document.getElementById('pfLineBtn').classList.remove('active'); }
     document.getElementById('pfEraserBtn').classList.toggle('active', pfErase);
+  }
+  function pfToggleLine(){
+    pfLine=!pfLine;
+    if(pfLine){ pfErase=false; document.getElementById('pfEraserBtn').classList.remove('active'); }
+    document.getElementById('pfLineBtn').classList.toggle('active', pfLine);
   }
   function pfUndo(){ if(pfStrokes.length){ pfStrokes.pop(); pfDraw(); } }
   function pfClearInk(){ pfStrokes=[]; pfCur=null; pfDraw(); }
@@ -1186,8 +1255,22 @@
     if(!pfW || !pfH) return;      // 탭이 아직 안 열려 크기가 0일 때는 그리지 않는다
     pfCtx.clearRect(0,0,pfW,pfH);
     pfCtx.fillStyle='#fff'; pfCtx.fillRect(0,0,pfW,pfH);
-    const g=pfGeom(), s=pf.step, ink='#1A1A1A', teal='#0D9488', blue='#2563EB', red='#DC2626';
+    const s=pf.step, ink='#1A1A1A', teal='#0D9488', blue='#2563EB', red='#DC2626';
 
+    // 교과서 예제: 생성 도형 대신 교과서 그림을 띄우고 그 위에 필기한다
+    const def=pfDef();
+    if(def.img){
+      const im=pfImgs[def.img];
+      if(im && im.complete && im.naturalWidth){
+        const sc=Math.min(pfW*0.90/im.naturalWidth, pfH*0.88/im.naturalHeight);
+        const w=im.naturalWidth*sc, h=im.naturalHeight*sc;
+        pfCtx.drawImage(im, (pfW-w)/2, (pfH-h)/2, w, h);
+      }
+      pfInkPaint();
+      return;
+    }
+
+    const g=pfGeom();
     if(pf.type==='iso'){ pfDrawIso(s,ink,teal,blue,red); pfInkPaint(); return; }
     if(pf.type==='circum'){ pfDrawCircum(s,ink,teal,blue,red); pfInkPaint(); return; }
     if(pf.type==='incenter'){ pfDrawIncenter(s,ink,teal,blue,red); pfInkPaint(); return; }
@@ -1552,6 +1635,7 @@
     if(isTeacher && proofKeys.length){
       document.getElementById('tabProof').style.display='';
       pf.type=proofKeys[0];
+      pfLoadImages();
       pfRenderPicker(); pfRender();
     }
 
