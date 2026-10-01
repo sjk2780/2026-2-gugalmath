@@ -94,7 +94,23 @@
   .pfmain{display:grid; grid-template-columns:1.32fr 1fr; gap:16px; align-items:stretch;
           height:calc(100vh - 330px); min-height:300px;}
   /* 증명 화면일 때는 TV 화면을 꽉 쓰고, 세로 스크롤이 생기지 않게 여백을 줄인다 */
-  body.proofmode .wrap{max-width:1720px; padding-bottom:14px;}
+  /* ★ 아이패드를 TV에 미러링하면 기기마다 화면 비율도, 주소창이 차지하는 높이도 다르다.
+     고정값(100vh - 330px)으로 빼면 어떤 기기에서는 아래 버튼이 화면 밖으로 밀린다.
+     그래서 proofmode에서는 세로 flex로 "남는 높이 전부"를 도형 칸에 준다.
+     100dvh = 주소창을 뺀 실제로 보이는 높이(iOS Safari의 100vh 함정 회피). */
+  body.proofmode .wrap{max-width:1720px; padding-bottom:14px;
+                       height:100vh; height:100dvh; display:flex; flex-direction:column;}
+  body.proofmode #viewProof{display:flex !important; flex-direction:column; flex:1; min-height:0;}
+  body.proofmode .pfmain{flex:1; height:auto; min-height:160px;}
+  /* 세로가 짧은 기기(아이패드 가로 + 사파리 주소창)에서는 증명에 필요 없는 머리말을 접어
+     그 높이를 전부 도형·필기 칸에 돌린다. 지금 무엇을 증명하는지는 아래 질문 줄이 말해 준다. */
+  @media(max-height:820px){
+    body.proofmode header.top{display:none;}
+    body.proofmode .tabs{margin-bottom:8px;}
+    body.proofmode #pfPicker{margin:6px 0 8px;}
+    body.proofmode .pfnav{margin-top:10px;}
+    body.proofmode .wrap{padding-top:12px;}
+  }
   body.proofmode header.top{margin-bottom:10px;}
   body.proofmode .tabs{margin-bottom:12px;}
   /* 다음을 누를 때마다 증명 과정이 오른쪽에 쌓인다 */
