@@ -481,8 +481,29 @@
         {k:'bc', label:'∠C의 이등분선'},
         {k:'circle', label:'점 I를 중심으로 하는 원'}
       ]
+    },
+    parallelogram: {
+      title: '어떤 사각형이 평행사변형이 될까요?',
+      sub: '네 꼭짓점 A, B, C, D를 끌어 사각형을 바꿔 보세요.',
+      tools: [
+        {k:'sides',  label:'대변의 길이'},
+        {k:'angles', label:'대각의 크기'},
+        {k:'diags',  label:'두 대각선'},
+        {k:'lock',   label:'평행사변형으로 고정'}
+      ]
+    },
+    quadkinds: {
+      title: '여러 가지 사각형을 만들어 봅시다',
+      sub: '점 A와 점 C를 끌어 보세요. (평행사변형은 항상 유지됩니다)',
+      tools: [
+        {k:'sides', label:'네 변의 길이'},
+        {k:'diags', label:'두 대각선'},
+        {k:'right', label:'직각 표시'}
+      ]
     }
   };
+  // 사각형 탐구 모드인가
+  function isQuadMode(){ return CONFIG.explore==='parallelogram' || CONFIG.explore==='quadkinds'; }
 
   const exMode = CONFIG.explore;
   const exDef  = EX_DEFS[exMode] || EX_DEFS.isosceles;
@@ -499,6 +520,7 @@
   let exCv, exCtx, exWrap, exW=0, exH=0;
 
   function exInitPoints(){
+    if(isQuadMode()){ exQuadInit(); return; }
     ex.A={x:exW*0.50, y:exH*0.16};
     ex.B={x:exW*0.22, y:exH*0.80};
     ex.C={x:exW*0.78, y:exH*0.80};
@@ -508,6 +530,176 @@
   // 두 번째 삼각형의 시작 위치(E가 놓이는 자리) — 화면 안에 완전히 들어오도록
   function exT2Start(){ return {dx:exW*0.56, dy:exH*0.72, rot:0, flip:1}; }
   function exReset(){ exInitPoints(); exDraw(); exUpdate(); }
+
+  /* ══════════════ 사각형 탐구 (6.2 / 6.3) ══════════════
+     □ABCD 는 A(왼쪽 위) → B(왼쪽 아래) → C(오른쪽 아래) → D(오른쪽 위) 순.
+     대변 쌍: AB↔DC, BC↔AD.  평행사변형 ⟺ D = A + C − B */
+  function exQuadInit(){
+    if(CONFIG.explore==='quadkinds'){
+      ex.A={x:exW*0.30, y:exH*0.26};
+      ex.B={x:exW*0.24, y:exH*0.78};
+      ex.C={x:exW*0.70, y:exH*0.78};
+      ex.D=add(sub(ex.A,ex.B), ex.C);           // 항상 평행사변형
+    } else {
+      // 일부러 평행사변형이 아닌 상태로 시작(학생이 직접 만들어 보도록)
+      ex.A={x:exW*0.32, y:exH*0.24};
+      ex.B={x:exW*0.20, y:exH*0.80};
+      ex.C={x:exW*0.72, y:exH*0.80};
+      ex.D={x:exW*0.80, y:exH*0.32};
+    }
+  }
+  // 표시 단위(0.1cm)에 해당하는 픽셀 허용오차
+  function exTolPx(){ return 0.1*((exW||600)/CANVAS_CM); }
+  const EX_ANG_TOL = 1.5;                        // 직각 스냅 허용오차(도)
+
+  function exIsPara(){
+    const ideal=add(sub(ex.A,ex.B), ex.C);
+    return dist(ideal, ex.D) < 0.5;
+  }
+  // 끌고 있는 점을 평행사변형이 되는 위치로 붙인다(거의 평행사변형일 때만)
+  function exSnapPara(k){
+    const {A,B,C,D}=ex;
+    let ideal;
+    if(k==='D') ideal=add(sub(A,B), C);
+    else if(k==='A') ideal=add(sub(D,C), B);
+    else if(k==='B') ideal=add(sub(A,D), C);
+    else            ideal=add(sub(D,A), B);      // 'C'
+    if(dist(ideal, ex[k]) < exTolPx()*2) ex[k]={x:ideal.x, y:ideal.y};
+  }
+  // 6.3: B를 기준으로 끌고 있는 점을 직각/같은 길이에 붙인다
+  function exSnapKind(k){
+    const B=ex.B;
+    const moved = (k==='A') ? 'A' : 'C';
+    const other = (k==='A') ? 'C' : 'A';
+    const vo = sub(ex[other], B), vm = sub(ex[moved], B);
+    const Lo = Math.hypot(vo.x,vo.y), Lm = Math.hypot(vm.x,vm.y);
+    if(Lo<1 || Lm<1) return;
+    let ang = Math.atan2(vm.y,vm.x), len = Lm;
+    // ① 두 변의 길이가 "화면에 같게 보이면" 정확히 같게 (마름모)
+    if(Math.abs(Lm-Lo) < exTolPx()) len = Lo;
+    // ② 두 대각선이 "화면에 같게 보이면" 정확히 직각으로 (직사각형)
+    //    ★ 고정 각도로 판단하면 안 된다. 도형이 작을 때 각도는 벌어졌는데
+    //      대각선 길이는 표시 단위 안에서 같아 보여 "대각선은 같은데 직사각형이
+    //      아니다"라는 모순이 생긴다(5.1에서 겪은 것과 같은 함정).
+    const base = Math.atan2(vo.y,vo.x);
+    let diff = (ang-base)*180/Math.PI;
+    while(diff>180) diff-=360; while(diff<-180) diff+=360;
+    const sign = diff>=0 ? 1 : -1;
+    const cand = { x:B.x+Math.cos(ang)*len, y:B.y+Math.sin(ang)*len };
+    const A2 = (moved==='A') ? cand : ex.A;
+    const C2 = (moved==='C') ? cand : ex.C;
+    const D2 = add(sub(A2,B), C2);
+    if(Math.abs(dist(A2,C2) - dist(B,D2)) < exTolPx()) ang = base + sign*Math.PI/2;
+    ex[moved] = { x:B.x+Math.cos(ang)*len, y:B.y+Math.sin(ang)*len };
+  }
+  // 사각형의 종류 판정 (스냅 덕분에 표시와 항상 일치한다)
+  function exQuadKind(){
+    const {A,B,C,D}=ex;
+    const para = exIsPara();
+    if(!para){
+      const ab=sub(B,A), dc=sub(C,D), ad=sub(D,A), bc=sub(C,B);
+      const cr=(u,v)=>Math.abs(u.x*v.y-u.y*v.x)/((Math.hypot(u.x,u.y)*Math.hypot(v.x,v.y))||1);
+      if(cr(ab,dc)<0.01 || cr(ad,bc)<0.01) return '사다리꼴';
+      return '사각형';
+    }
+    const eqSide = Math.abs(dist(A,B)-dist(B,C)) < 0.5;
+    const right  = Math.abs(angleAt(B,A,C)-90) < 0.05;
+    if(eqSide && right) return '정사각형';
+    if(right)  return '직사각형';
+    if(eqSide) return '마름모';
+    return '평행사변형';
+  }
+
+  function exQuadDraw(){
+    const {A,B,C,D}=ex, ink='#1A1A1A', teal='#0D9488', blue='#2563EB', red='#DC2626';
+    if(!A||!D) return;
+    exSeg(A,B,ink,2.5); exSeg(B,C,ink,2.5); exSeg(C,D,ink,2.5); exSeg(D,A,ink,2.5);
+
+    if(ex.opts.diags){
+      exSeg(A,C,teal,2); exSeg(B,D,teal,2);
+      const O=lineX(A,sub(C,A),B,sub(D,B));
+      if(O){
+        exDot(O,red,5); exLabel(O,'O',red,16,-12);
+        exTick(A,O,1,teal); exTick(O,C,1,teal);
+        exTick(B,O,2,teal); exTick(O,D,2,teal);
+        if(CONFIG.explore==='quadkinds' && ex.opts.right){
+          const k=exQuadKind();
+          if(k==='마름모'||k==='정사각형') exRightMark(O, sub(A,O), sub(B,O), 10);
+        }
+      }
+    }
+    if(ex.opts.sides){
+      exTick(A,B,1); exTick(D,C,1);              // 대변 AB, DC
+      exTick(B,C,2); exTick(A,D,2);              // 대변 BC, AD
+    }
+    if(ex.opts.angles){
+      exArcAt(A,D,B,34,blue); exArcAt(C,B,D,34,blue);
+      exArcAt(B,A,C,40,red);  exArcAt(D,C,A,40,red);
+    }
+    if(ex.opts.right && CONFIG.explore==='quadkinds'){
+      const k=exQuadKind();
+      if(k==='직사각형'||k==='정사각형'){
+        [[A,D,B],[B,A,C],[C,B,D],[D,C,A]].forEach(([P,X,Y])=>exRightMark(P, sub(X,P), sub(Y,P), 12));
+      }
+    }
+    const fixed = (CONFIG.explore==='quadkinds');
+    exHandle(A,'A'); exHandle(C,'C');
+    if(fixed){ exDot(B,'#9CA3AF',7); exLabel(B,'B',ink,-20,18); exDot(D,'#9CA3AF',7); exLabel(D,'D',ink,18,-16); }
+    else { exHandle(B,'B'); exHandle(D,'D'); }
+  }
+  // 점 P에서 X, Y 방향 사이의 각에 호를 그린다
+  function exArcAt(P,X,Y,r,color){
+    const a1=Math.atan2(X.y-P.y,X.x-P.x), a2=Math.atan2(Y.y-P.y,Y.x-P.x);
+    let d=a2-a1; while(d>Math.PI)d-=2*Math.PI; while(d<-Math.PI)d+=2*Math.PI;
+    exCtx.save(); exCtx.strokeStyle=color; exCtx.lineWidth=2.4;
+    exCtx.beginPath(); exCtx.arc(P.x,P.y,r,a1,a1+d,d<0); exCtx.stroke(); exCtx.restore();
+  }
+
+  function exQuadUpdate(){
+    const {A,B,C,D}=ex, items=[];
+    let msg='';
+    const kind=exQuadKind();
+    if(CONFIG.explore==='parallelogram'){
+      if(ex.opts.sides){
+        items.push({k:'AB', v:cm(dist(A,B))+' cm'});
+        items.push({k:'DC', v:cm(dist(D,C))+' cm', eq:Math.abs(dist(A,B)-dist(D,C))<0.5});
+        items.push({k:'BC', v:cm(dist(B,C))+' cm'});
+        items.push({k:'AD', v:cm(dist(A,D))+' cm', eq:Math.abs(dist(B,C)-dist(A,D))<0.5});
+      }
+      if(ex.opts.angles){
+        const a=angleAt(A,D,B), c=angleAt(C,B,D), b=angleAt(B,A,C), d=angleAt(D,C,A);
+        items.push({k:'∠A', v:a.toFixed(1)+'°'});
+        items.push({k:'∠C', v:c.toFixed(1)+'°', eq:Math.abs(a-c)<0.05});
+        items.push({k:'∠B', v:b.toFixed(1)+'°'});
+        items.push({k:'∠D', v:d.toFixed(1)+'°', eq:Math.abs(b-d)<0.05});
+      }
+      if(ex.opts.diags){
+        const O=lineX(A,sub(C,A),B,sub(D,B));
+        if(O){
+          items.push({k:'AO', v:cm(dist(A,O))+' cm'});
+          items.push({k:'OC', v:cm(dist(O,C))+' cm', eq:Math.abs(dist(A,O)-dist(O,C))<0.5});
+          items.push({k:'BO', v:cm(dist(B,O))+' cm'});
+          items.push({k:'OD', v:cm(dist(O,D))+' cm', eq:Math.abs(dist(B,O)-dist(O,D))<0.5});
+        }
+      }
+      if(!items.length) items.push({k:'안내', v:'아래 버튼으로 무엇을 볼지 골라 보세요'});
+      items.push({k:'이 사각형은', v:kind});
+      if(kind==='평행사변형') msg='두 쌍의 대변이 각각 평행합니다. 평행사변형이 되었어요.';
+    } else {
+      items.push({k:'AB', v:cm(dist(A,B))+' cm'});
+      items.push({k:'BC', v:cm(dist(B,C))+' cm', eq:Math.abs(dist(A,B)-dist(B,C))<0.5});
+      items.push({k:'∠B', v:angleAt(B,A,C).toFixed(1)+'°'});
+      if(ex.opts.diags){
+        items.push({k:'AC', v:cm(dist(A,C))+' cm'});
+        items.push({k:'BD', v:cm(dist(B,D))+' cm', eq:Math.abs(dist(A,C)-dist(B,D))<0.5});
+      }
+      items.push({k:'이 사각형은', v:kind});
+      if(kind==='직사각형') msg='네 각이 모두 직각입니다. 두 대각선의 길이를 비교해 보세요.';
+      if(kind==='마름모')   msg='네 변의 길이가 모두 같습니다. 두 대각선이 만나는 각을 살펴보세요.';
+      if(kind==='정사각형') msg='직사각형이면서 마름모입니다.';
+    }
+    return {items, msg};
+  }
 
   function exResize(){
     if(!exCv||!exWrap) return;
@@ -519,8 +711,8 @@
     exCv.width=w; exCv.height=h; exW=w; exH=h;
     if(first){ exInitPoints(); }
     else{
-      ['A','B','C'].forEach(k=>{ if(ex[k]){ ex[k].x*=rx; ex[k].y*=ry; } });
-      ex.lockLen=dist(ex.A,ex.B);
+      ['A','B','C','D'].forEach(k=>{ if(ex[k]){ ex[k].x*=rx; ex[k].y*=ry; } });
+      if(!isQuadMode()) ex.lockLen=dist(ex.A,ex.B);
     }
     exDraw(); exUpdate();
   }
@@ -553,7 +745,10 @@
     }
     else{
       ex.opts[t.k]=!ex.opts[t.k];
-      if(t.k==='lock' && ex.opts.lock){ ex.lockLen=dist(ex.A,ex.B); exApplyLock('C'); }
+      if(t.k==='lock' && ex.opts.lock){
+        if(isQuadMode()) ex.D=add(sub(ex.A,ex.B), ex.C);   // 켜는 즉시 평행사변형으로
+        else { ex.lockLen=dist(ex.A,ex.B); exApplyLock('C'); }
+      }
     }
     exSyncChips(); exDraw(); exUpdate();
   }
@@ -646,6 +841,7 @@
   function exDraw(){
     if(!exCtx) return;
     exClear();
+    if(isQuadMode()){ exQuadDraw(); return; }
     if(exMode==='congruence'){ exDrawCongruence(); return; }
     const {A,B,C}=ex;
     if(!A) return;
@@ -781,7 +977,10 @@
     const {A,B,C}=ex;
     let items=[], msg='';
 
-    if(exMode==='congruence'){
+    if(isQuadMode()){
+      if(ex.A){ const q=exQuadUpdate(); items=q.items; msg=q.msg; }
+    }
+    else if(exMode==='congruence'){
       const ok=exCongruenceMatched();
       items=[{k:'조건', v: ex.preset==='rha' ? '빗변 + 한 예각' : '빗변 + 다른 한 변'}];
       if(ok) msg='두 삼각형이 완전히 포개졌습니다. 즉, 두 직각삼각형은 서로 합동입니다.';
@@ -858,6 +1057,13 @@
   }
   function exDown(e){
     const p=exPos(e);
+    if(isQuadMode()){
+      const keys = (CONFIG.explore==='quadkinds') ? ['A','C'] : ['A','B','C','D'];
+      let best=null, bd=1e9;
+      keys.forEach(k=>{ const d=dist(p,ex[k]); if(d<bd){ bd=d; best=k; } });
+      if(bd<34) ex.drag=best;
+      return;
+    }
     if(exMode==='congruence'){
       const u=exTri2Pts();
       if(dist(p,u.E)<34 || dist(p,u.D)<34 || dist(p,u.F)<34){
@@ -872,6 +1078,23 @@
   function exMove(e){
     if(!ex.drag) return;
     const p=exPos(e);
+    if(isQuadMode()){
+      const k=ex.drag;
+      ex[k]={x:Math.max(26,Math.min(exW-26,p.x)), y:Math.max(32,Math.min(exH-26,p.y))};
+      if(CONFIG.explore==='quadkinds'){
+        exSnapKind(k);                                   // 직각 / 같은 변 길이로 붙이기
+        ex.D=add(sub(ex.A,ex.B), ex.C);                  // 평행사변형 유지
+      } else if(ex.opts.lock){
+        if(k==='D') ex.D=add(sub(ex.A,ex.B), ex.C);
+        else if(k==='A') ex.A=add(sub(ex.D,ex.C), ex.B);
+        else if(k==='B') ex.B=add(sub(ex.A,ex.D), ex.C);
+        else ex.C=add(sub(ex.D,ex.A), ex.B);
+      } else {
+        exSnapPara(k);                                   // 거의 평행사변형이면 정확히 맞춰 준다
+      }
+      exDraw(); exUpdate();
+      return;
+    }
     if(ex.drag.t2){ ex.t2.dx=p.x-ex.drag.ox; ex.t2.dy=p.y-ex.drag.oy; }
     else{
       const k=ex.drag;
@@ -1066,6 +1289,70 @@
         '따라서 점 O를 중심으로 하고 OA를 반지름으로 하는\n원을 그리면, 이 원은 △ABC의 세 꼭짓점을 모두 지난다.',
         '이와 같이 원 O가 △ABC의 세 꼭짓점을 모두 지날 때,\n원 O는 △ABC에 외접한다고 한다.',
         '이때 원 O를 △ABC의 외접원,\n원 O의 중심 O를 △ABC의 외심이라고 한다.'
+      ]
+    },
+    // ── 6.2 평행사변형이 되는 조건 ──
+    paraSide: {
+      name:'두 쌍의 대변의 길이가 같으면',
+      quad:'para',
+      steps:[
+        '□ABCD에서 AB = DC, BC = AD 라고 하자.',
+        '대각선 AC를 그으면\n△ABC와 △CDA에서\nAB = CD,   BC = DA,   AC는 공통인 변',
+        '따라서 △ABC ≡ △CDA (SSS 합동)',
+        '이때 ∠BAC = ∠DCA 이고\n∠BAC와 ∠DCA는 엇각이므로   AB ∥ DC',
+        '또 ∠ACB = ∠CAD 이고\n∠ACB와 ∠CAD는 엇각이므로   AD ∥ BC',
+        '따라서 □ABCD는 두 쌍의 대변이 각각 평행하므로\n평행사변형이다.'
+      ]
+    },
+    paraAngle: {
+      name:'두 쌍의 대각의 크기가 같으면',
+      quad:'para',
+      steps:[
+        '□ABCD에서 ∠A = ∠C, ∠B = ∠D 라고 하자.',
+        '사각형의 내각의 크기의 합은 360°이므로\n∠A + ∠B + ∠C + ∠D = 360°',
+        '∠A = ∠C, ∠B = ∠D 이므로\n∠A + ∠B = 180°',
+        'AB의 연장선 위에 한 점 E를 잡으면\n∠BAD + ∠EAD = 180° 이므로   ∠B = ∠EAD',
+        '∠B와 ∠EAD는 동위각이므로   AD ∥ BC',
+        '또 ∠B = ∠D 이므로 ∠EAD = ∠D 이고,\n∠EAD와 ∠D는 엇각이므로   AB ∥ DC',
+        '따라서 □ABCD는 두 쌍의 대변이 각각 평행하므로\n평행사변형이다.'
+      ]
+    },
+    paraDiag: {
+      name:'두 대각선이 서로를 이등분하면',
+      quad:'paraDiag',
+      steps:[
+        '□ABCD에서 두 대각선 AC, BD의 교점이 O이고\nOA = OC, OB = OD 라고 하자.',
+        '△OAB와 △OCD에서\nOA = OC,   OB = OD,   ∠AOB = ∠COD (맞꼭지각)',
+        '따라서 △OAB ≡ △OCD (SAS 합동)',
+        '이때 ∠BAO = ∠DCO 이고 엇각이므로   AB ∥ DC',
+        '마찬가지로 △OAD ≡ △OCB (SAS 합동)\n∠DAO = ∠BCO 이고 엇각이므로   AD ∥ BC',
+        '따라서 □ABCD는 두 쌍의 대변이 각각 평행하므로\n평행사변형이다.'
+      ]
+    },
+    // ── 6.3 여러 가지 사각형의 성질 ──
+    rectDiag: {
+      name:'직사각형의 두 대각선',
+      quad:'rect',
+      steps:[
+        '직사각형은 네 내각이 모두 직각인 사각형이다.\n두 쌍의 대각의 크기가 각각 같으므로 평행사변형이다.',
+        '따라서 직사각형에서 두 쌍의 대변의 길이는 각각 같고,\n두 대각선은 서로를 이등분한다.',
+        '직사각형 ABCD에 두 대각선 AC, BD를 그어 보자.',
+        '△ABC와 △DCB에서\nAB = DC,   ∠ABC = ∠DCB = 90°,   BC는 공통인 변',
+        '따라서 △ABC ≡ △DCB (SAS 합동)',
+        '그러므로   AC = DB',
+        '즉, 직사각형에서 두 대각선은 길이가 같고,\n서로를 이등분한다.'
+      ]
+    },
+    rhombusDiag: {
+      name:'마름모의 두 대각선',
+      quad:'rhombus',
+      steps:[
+        '마름모는 네 변의 길이가 모두 같은 사각형이다.\n두 쌍의 대변의 길이가 각각 같으므로 평행사변형이다.',
+        '따라서 마름모에서 두 대각선은 서로를 이등분한다.\n두 대각선의 교점을 O라고 하자.',
+        '△AOB와 △AOD에서\nAB = AD,   AO는 공통인 변,   OB = OD',
+        '따라서 △AOB ≡ △AOD (SSS 합동)',
+        '그러므로 ∠AOB = ∠AOD 이고\n∠AOB + ∠AOD = 180° 이므로   ∠AOB = ∠AOD = 90°',
+        '즉, 마름모에서 두 대각선은 서로를 수직이등분한다.'
       ]
     },
     // ── 교과서 예제 (교사가 화면으로 풀어 보이는 용도) ──
@@ -1301,6 +1588,7 @@
     }
 
     const g=pfGeom();
+    if(def.quad){ pfDrawQuad(def.quad, s, ink, teal, blue, red); pfInkPaint(); return; }
     if(pf.type==='iso'){ pfDrawIso(s,ink,teal,blue,red); pfInkPaint(); return; }
     if(pf.type==='circum'){ pfDrawCircum(s,ink,teal,blue,red); pfInkPaint(); return; }
     if(pf.type==='incenter'){ pfDrawIncenter(s,ink,teal,blue,red); pfInkPaint(); return; }
@@ -1404,6 +1692,55 @@
   function pfCircleFull(O,r,color){
     pfCtx.save(); pfCtx.strokeStyle=color; pfCtx.lineWidth=2.6;
     pfCtx.beginPath(); pfCtx.arc(O.x,O.y,r,0,Math.PI*2); pfCtx.stroke(); pfCtx.restore();
+  }
+  /* ── 6단원 증명용 사각형 (A 왼쪽위 → B 왼쪽아래 → C 오른쪽아래 → D 오른쪽위) ── */
+  function pfQuadPts(kind){
+    const w=Math.min(pfW*0.34, pfH*0.52);      // 가로 변 길이
+    const h=Math.min(pfH*0.46, pfW*0.30);      // 세로 높이
+    const cx=pfW*0.5, cy=pfH*0.52;
+    let skew=h*0.42;                            // 기울기(평행사변형)
+    if(kind==='rect') skew=0;
+    if(kind==='rhombus'){
+      // 마름모: 대각선이 가로·세로인 모양으로 둔다
+      const a=Math.min(pfW*0.22, pfH*0.40), b=Math.min(pfH*0.34, pfW*0.20);
+      return { A:{x:cx, y:cy-b}, B:{x:cx-a, y:cy}, C:{x:cx, y:cy+b}, D:{x:cx+a, y:cy} };
+    }
+    const B={x:cx-w/2-skew/2, y:cy+h/2};
+    const C={x:cx+w/2-skew/2, y:cy+h/2};
+    const A={x:B.x+skew,      y:cy-h/2};
+    const D={x:C.x+skew,      y:cy-h/2};
+    return {A,B,C,D};
+  }
+  function pfDrawQuad(kind, s, ink, teal, blue, red){
+    const q=pfQuadPts(kind), A=q.A, B=q.B, C=q.C, D=q.D;
+    pfSeg(A,B,ink,3); pfSeg(B,C,ink,3); pfSeg(C,D,ink,3); pfSeg(D,A,ink,3);
+    if(kind==='rhombus'){
+      pfLabel(A,'A',ink,0,-22); pfLabel(B,'B',ink,-22,0);
+      pfLabel(C,'C',ink,0,24);  pfLabel(D,'D',ink,22,0);
+    } else {
+      pfLabel(A,'A',ink,-20,-14); pfLabel(B,'B',ink,-20,16);
+      pfLabel(C,'C',ink,20,16);   pfLabel(D,'D',ink,20,-14);
+    }
+    // 주어진 조건만 표시 (나머지는 교사가 펜으로)
+    if(kind==='para'){                       // 대변 길이가 같다는 조건
+      pfTick(A,B,1); pfTick(D,C,1);
+      pfTick(B,C,2); pfTick(A,D,2);
+    }
+    if(kind==='paraDiag' || kind==='rect' || kind==='rhombus'){
+      pfSeg(A,C,teal,2.2); pfSeg(B,D,teal,2.2);
+      const O=lineX(A,sub(C,A),B,sub(D,B));
+      if(O){ pfDot2(O,red,5.5); pfLabel(O,'O',red,16,-12); }
+    }
+    if(kind==='paraDiag'){
+      const O=lineX(A,sub(C,A),B,sub(D,B));
+      if(O){ pfTick(A,O,1,teal); pfTick(O,C,1,teal); pfTick(B,O,2,teal); pfTick(O,D,2,teal); }
+    }
+    if(kind==='rect'){
+      [[A,D,B],[B,A,C],[C,B,D],[D,C,A]].forEach(([P,X,Y])=>pfRight(P, sub(X,P), sub(Y,P)));
+    }
+    if(kind==='rhombus'){
+      pfTick(A,B,1); pfTick(B,C,1); pfTick(C,D,1); pfTick(D,A,1);
+    }
   }
   function pfDot2(p,color,r){
     pfCtx.save(); pfCtx.fillStyle=color;
