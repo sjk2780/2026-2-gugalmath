@@ -1143,54 +1143,96 @@
     cv.width=w; cv.height=h; draw();
   }
 
-  function draw(){
-    if(!ctx) return;
-    ctx.clearRect(0,0,cv.width,cv.height);
-    ctx.fillStyle='#fff'; ctx.fillRect(0,0,cv.width,cv.height);
-    // 문제 그림을 배경으로 (그 위에 바로 필기)
-    if(bgImg && bgReady && bgImg.width){
+  /* 증명 화면과 같은 이유로(§ pfDraw 주석) 배경을 캐시하고 필기는 새 구간만 덧그린다.
+     학생도 아이패드로 풀이를 길게 쓰므로, 쓸수록 느려지면 안 된다. */
+  let skBg=null, skBgCtx=null, skBgKey='', skDone=0, skRaf=0, skRect=null;
+  function skBgPaint(){
+    if(!skBg){ skBg=document.createElement('canvas'); skBgCtx=skBg.getContext('2d'); }
+    if(skBg.width!==cv.width || skBg.height!==cv.height){ skBg.width=cv.width; skBg.height=cv.height; skBgKey=''; }
+    const key=[cv.width, cv.height, bgReady?1:0, activeIdx].join('|');
+    if(key===skBgKey) return;
+    skBgCtx.clearRect(0,0,skBg.width,skBg.height);
+    skBgCtx.fillStyle='#fff'; skBgCtx.fillRect(0,0,skBg.width,skBg.height);
+    if(bgImg && bgReady && bgImg.width){     // 문제 그림을 배경으로 (그 위에 바로 필기)
       const maxW=cv.width*0.86, maxH=cv.height*0.62;
       const s=Math.min(maxW/bgImg.width, maxH/bgImg.height, 1.6);
       const w=bgImg.width*s, h=bgImg.height*s;
-      ctx.drawImage(bgImg, (cv.width-w)/2, cv.height*0.04, w, h);
+      skBgCtx.drawImage(bgImg, (cv.width-w)/2, cv.height*0.04, w, h);
     }
-    // 필기는 별도 레이어에 그리고, 지우개는 그 레이어에서만 지운다
+    skBgKey=key;
+  }
+  function skInvalidateBg(){ skBgKey=''; }
+  function skPaintStroke(c, s, from){
+    if(!s || !s.pts.length) return;
+    c.globalCompositeOperation = s.erase ? 'destination-out' : 'source-over';
+    if(s.pts.length===1){
+      c.fillStyle = s.erase ? '#000' : s.color;
+      c.beginPath(); c.arc(s.pts[0].x, s.pts[0].y, s.width/2, 0, Math.PI*2); c.fill();
+      c.globalCompositeOperation='source-over'; return;
+    }
+    const i0=Math.max(0,(from||0)-1);
+    if(i0>=s.pts.length-1){ c.globalCompositeOperation='source-over'; return; }
+    c.strokeStyle = s.erase ? '#000' : s.color;
+    c.lineWidth=s.width; c.lineCap='round'; c.lineJoin='round';
+    c.beginPath(); c.moveTo(s.pts[i0].x, s.pts[i0].y);
+    for(let i=i0+1;i<s.pts.length;i++) c.lineTo(s.pts[i].x, s.pts[i].y);
+    c.stroke();
+    c.globalCompositeOperation='source-over';
+  }
+  function inkRebuild(){
+    if(!ctx) return;
     ensureInk(cv.width, cv.height);
     inkCtx.clearRect(0,0,inkCv.width,inkCv.height);
-    inkCtx.lineCap='round'; inkCtx.lineJoin='round';
-    const all = curStroke ? strokes.concat([curStroke]) : strokes;
-    all.forEach(s=>{
-      if(!s.pts.length) return;
-      inkCtx.globalCompositeOperation = s.erase ? 'destination-out' : 'source-over';
-      inkCtx.strokeStyle = s.erase ? '#000' : s.color;
-      inkCtx.lineWidth = s.width;
-      inkCtx.beginPath(); inkCtx.moveTo(s.pts[0].x,s.pts[0].y);
-      for(let i=1;i<s.pts.length;i++) inkCtx.lineTo(s.pts[i].x,s.pts[i].y);
-      inkCtx.stroke();
-    });
-    inkCtx.globalCompositeOperation='source-over';
-    ctx.drawImage(inkCv,0,0);
+    strokes.forEach(s=>skPaintStroke(inkCtx, s, 0));
   }
+  function draw(){
+    if(!ctx) return;
+    const resized = !inkCv || inkCv.width!==cv.width || inkCv.height!==cv.height;
+    ensureInk(cv.width, cv.height);
+    if(resized) inkRebuild();
+    skBgPaint();
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.drawImage(skBg,0,0);
+    ctx.drawImage(inkCv,0,0);
+    if(curStroke && lineMode) skPaintStroke(ctx, curStroke, 0);   // 직선 미리보기
+  }
+  function requestDraw(){ if(skRaf) return; skRaf=requestAnimationFrame(()=>{ skRaf=0; draw(); }); }
   function pos(e){
-    const r=cv.getBoundingClientRect();
+    const r = skRect || cv.getBoundingClientRect();
     const t=e.touches&&e.touches[0]?e.touches[0]:e;
     return {x:t.clientX-r.left, y:t.clientY-r.top};
   }
   function startDraw(e){
-    dragging=true; const p=pos(e);
+    dragging=true; skRect=cv.getBoundingClientRect();
+    const p=pos(e);
     curStroke={color:penColor, width:eraserOn?22:2.5, erase:eraserOn, pts: lineMode?[p,p]:[p]};
+    skDone=0; ensureInk(cv.width, cv.height);
+    if(!lineMode){ skPaintStroke(inkCtx, curStroke, 0); skDone=curStroke.pts.length; }
     draw();
   }
   function moveDraw(e){
     if(!dragging||!curStroke) return;
-    const p=pos(e);
-    if(lineMode) curStroke.pts[1]=p; else curStroke.pts.push(p);
-    draw();
+    if(lineMode){ curStroke.pts[1]=pos(e); }
+    else {
+      const evs=(e.getCoalescedEvents ? e.getCoalescedEvents() : null);
+      if(evs && evs.length){ for(const ev of evs) curStroke.pts.push(pos(ev)); }
+      else curStroke.pts.push(pos(e));
+      skPaintStroke(inkCtx, curStroke, skDone);
+      skDone=curStroke.pts.length;
+    }
+    requestDraw();
   }
   function endDraw(){
-    if(curStroke){ if(curStroke.pts.length) strokes.push(curStroke); curStroke=null; draw(); }
-    dragging=false;
+    if(curStroke){
+      if(curStroke.pts.length){
+        if(lineMode) skPaintStroke(inkCtx, curStroke, 0);
+        strokes.push(curStroke);
+      }
+      curStroke=null; draw();
+    }
+    dragging=false; skRect=null;
   }
+  function cancelDraw(){ curStroke=null; dragging=false; skRect=null; inkRebuild(); draw(); }
   function setPen(c,el){
     penColor=c; eraserOn=false; lineMode=false;
     document.querySelectorAll('.sk-dot').forEach(d=>d.classList.remove('active'));
@@ -1208,10 +1250,10 @@
     if(lineMode){ eraserOn=false; document.getElementById('eraserBtn').classList.remove('active'); }
     document.getElementById('lineBtn').classList.toggle('active', lineMode);
   }
-  function undoStroke(){ if(strokes.length){ strokes.pop(); draw(); } }
+  function undoStroke(){ if(strokes.length){ strokes.pop(); inkRebuild(); draw(); } }
   function clearSketch(){
     if(strokes.length && !confirm('필기한 내용을 모두 지울까요?')) return;
-    strokes=[]; curStroke=null; draw();
+    strokes=[]; curStroke=null; inkRebuild(); draw();
   }
 
   /* ── 문제 표시 ── */
@@ -1235,11 +1277,11 @@
     document.getElementById('pLabel').textContent=p.label;
     document.getElementById('pText').textContent=p.text;
     document.getElementById('pMath').innerHTML = p.math ? tex(p.math,false) : '';
-    strokes=[]; curStroke=null;
+    strokes=[]; curStroke=null; inkRebuild(); skInvalidateBg();
     bgReady=false; bgImg=null;
     if(p.image){
       const im=new Image();
-      im.onload=()=>{ bgImg=im; bgReady=true; draw(); };
+      im.onload=()=>{ bgImg=im; bgReady=true; skInvalidateBg(); draw(); };
       im.src=p.image;
     }
     draw();
@@ -1445,7 +1487,7 @@
     const src=CONFIG.proofImages||{};
     Object.keys(src).forEach(k=>{
       const im=new Image();
-      im.onload=()=>{ if(currentView==='proof') pfDraw(); };
+      im.onload=()=>{ pfInvalidateBg(); if(currentView==='proof') pfDraw(); };
       im.src=src[k];
       pfImgs[k]=im;
     });
@@ -1454,44 +1496,100 @@
   /* ── 증명 화면 위에 직접 필기하는 펜 ── */
   let pfStrokes=[], pfCur=null, pfPen='#DC2626', pfErase=false, pfLine=false, pfDrag=false;
   let pfWidth=4.5;   // 증명 전용 펜 두께(얇게 2.5 / 보통 4.5 / 굵게 8)
-  let pfInk=null, pfInkCtx=null;
-  function pfInkPaint(){
-    if(!pfW||!pfH) return;
+  /* ★ 아이패드 필기가 느려지지 않게 하는 구조 (2026-10-02)
+     예전에는 펜이 움직일 때마다 (배경 도형 + 지금까지 쓴 모든 획)을 처음부터 다시 그렸다.
+     글씨가 쌓일수록 한 점 찍는 비용이 커져서 쓸수록 렉이 걸렸다.
+     지금은 레이어 두 장을 캐시해 두고, 한 점은 "새로 들어온 구간"만 그린다.
+       pfBg  : 배경(흰 바탕 + 경계선 + 도형). 단계·크기가 바뀔 때만 다시 그린다.
+       pfInk : 지금까지의 필기. 획을 그릴 때 새 구간만 덧그린다.
+     매 프레임 하는 일 = 레이어 두 장 붙이기 + 선분 한 개. 글씨 양과 무관하게 일정하다. */
+  let pfInk=null, pfInkCtx=null, pfBg=null, pfBgCtx=null, pfBgKey='', pfDone=0, pfRaf=0, pfRect=null;
+
+  function pfLayers(){
     if(!pfInk){ pfInk=document.createElement('canvas'); pfInkCtx=pfInk.getContext('2d'); }
-    if(pfInk.width!==pfW || pfInk.height!==pfH){ pfInk.width=pfW; pfInk.height=pfH; }
-    pfInkCtx.clearRect(0,0,pfW,pfH);
-    pfInkCtx.lineCap='round'; pfInkCtx.lineJoin='round';
-    const all = pfCur ? pfStrokes.concat([pfCur]) : pfStrokes;
-    all.forEach(s=>{
-      if(!s.pts.length) return;
-      pfInkCtx.globalCompositeOperation = s.erase ? 'destination-out' : 'source-over';
-      pfInkCtx.strokeStyle = s.erase ? '#000' : s.color;
-      pfInkCtx.lineWidth = s.width;
-      pfInkCtx.beginPath(); pfInkCtx.moveTo(s.pts[0].x, s.pts[0].y);
-      for(let i=1;i<s.pts.length;i++) pfInkCtx.lineTo(s.pts[i].x, s.pts[i].y);
-      pfInkCtx.stroke();
-    });
-    pfInkCtx.globalCompositeOperation='source-over';
-    pfCtx.drawImage(pfInk,0,0);
+    if(!pfBg){ pfBg=document.createElement('canvas'); pfBgCtx=pfBg.getContext('2d'); }
+    if(pfInk.width!==pfW || pfInk.height!==pfH){ pfInk.width=pfW; pfInk.height=pfH; pfInkRebuild(); }
+    if(pfBg.width!==pfW || pfBg.height!==pfH){ pfBg.width=pfW; pfBg.height=pfH; pfBgKey=''; }
   }
+  // 획을 그린다. from을 주면 그 앞 점부터 이어서(증분) 그린다.
+  function pfPaintStroke(ctx, s, from){
+    if(!s || !s.pts.length) return;
+    ctx.globalCompositeOperation = s.erase ? 'destination-out' : 'source-over';
+    if(s.pts.length===1){                       // 톡 찍은 점
+      ctx.fillStyle = s.erase ? '#000' : s.color;
+      ctx.beginPath(); ctx.arc(s.pts[0].x, s.pts[0].y, s.width/2, 0, Math.PI*2); ctx.fill();
+      ctx.globalCompositeOperation='source-over'; return;
+    }
+    const i0 = Math.max(0, (from||0) - 1);
+    if(i0 >= s.pts.length-1){ ctx.globalCompositeOperation='source-over'; return; }
+    ctx.strokeStyle = s.erase ? '#000' : s.color;
+    ctx.lineWidth = s.width; ctx.lineCap='round'; ctx.lineJoin='round';
+    ctx.beginPath(); ctx.moveTo(s.pts[i0].x, s.pts[i0].y);
+    for(let i=i0+1;i<s.pts.length;i++) ctx.lineTo(s.pts[i].x, s.pts[i].y);
+    ctx.stroke();
+    ctx.globalCompositeOperation='source-over';
+  }
+  // 되돌리기·지우기·화면 크기 변경처럼 드물게만 일어나는 경우에만 전부 다시 그린다.
+  function pfInkRebuild(){
+    if(!pfInkCtx) return;
+    pfInkCtx.clearRect(0,0,pfInk.width,pfInk.height);
+    pfStrokes.forEach(s=>pfPaintStroke(pfInkCtx, s, 0));
+  }
+  function pfInvalidateBg(){ pfBgKey=''; }
+  function pfBgPaint(){
+    const key=[pf.type, pf.step, pf.flip.toFixed(3), pf.move.toFixed(3), pfW, pfH, pfFW, pfLogOn].join('|');
+    if(key===pfBgKey) return;                 // 바뀐 게 없으면 다시 안 그린다
+    const real=pfCtx;
+    pfCtx=pfBgCtx;                            // 도형 그리기 함수들이 전부 pfCtx를 쓰므로 잠깐 바꿔 끼운다
+    try{ pfScene(); } finally { pfCtx=real; }
+    pfBgKey=key;
+  }
+  function pfRequestDraw(){
+    if(pfRaf) return;
+    pfRaf=requestAnimationFrame(()=>{ pfRaf=0; pfDraw(); });
+  }
+
   function pfPos(e){
-    const r=pfCv.getBoundingClientRect();
+    const r = pfRect || pfCv.getBoundingClientRect();
     const t=e.touches&&e.touches[0]?e.touches[0]:e;
     return {x:t.clientX-r.left, y:t.clientY-r.top};
   }
   function pfDown(e){
-    pfDrag=true; const p=pfPos(e);
+    pfDrag=true;
+    pfRect=pfCv.getBoundingClientRect();   // 한 획 그리는 동안 고정(매 점마다 재계산하면 느리다)
+    const p=pfPos(e);
     // 지우개는 펜 두께에 비례해 넉넉하게(두꺼운 펜으로 쓴 글씨를 한 번에 지울 수 있게)
     pfCur={color:pfPen, width: pfErase ? pfWidth*6 : pfWidth, erase:pfErase, pts: pfLine?[p,p]:[p]};
+    pfDone=0;
+    pfLayers();
+    if(!pfLine){ pfPaintStroke(pfInkCtx, pfCur, 0); pfDone=pfCur.pts.length; }
     pfDraw();
   }
   function pfMove(e){
     if(!pfDrag||!pfCur) return;
-    const p=pfPos(e);
-    if(pfLine) pfCur.pts[1]=p; else pfCur.pts.push(p);
-    pfDraw();
+    if(pfLine){ pfCur.pts[1]=pfPos(e); }     // 직선은 손 뗄 때 확정하므로 미리보기만
+    else {
+      // 펜이 한 프레임에 여러 점을 보내면 전부 받아야 선이 각지지 않는다
+      const evs = (e.getCoalescedEvents ? e.getCoalescedEvents() : null);
+      if(evs && evs.length) { for(const ev of evs) pfCur.pts.push(pfPos(ev)); }
+      else pfCur.pts.push(pfPos(e));
+      pfPaintStroke(pfInkCtx, pfCur, pfDone);   // 새로 들어온 구간만
+      pfDone=pfCur.pts.length;
+    }
+    pfRequestDraw();
   }
-  function pfUp(){ if(pfCur){ if(pfCur.pts.length) pfStrokes.push(pfCur); pfCur=null; pfDraw(); } pfDrag=false; }
+  function pfUp(){
+    if(pfCur){
+      if(pfCur.pts.length){
+        if(pfLine) pfPaintStroke(pfInkCtx, pfCur, 0);   // 직선은 여기서 확정
+        pfStrokes.push(pfCur);
+      }
+      pfCur=null; pfDraw();
+    }
+    pfDrag=false; pfRect=null;
+  }
+  // 손바닥이 시작한 획 취소 — 이미 레이어에 그려졌으므로 다시 만든다
+  function pfCancel(){ pfCur=null; pfDrag=false; pfRect=null; pfInkRebuild(); pfDraw(); }
   function pfSetPen(c,el){
     pfPen=c; pfErase=false;
     document.querySelectorAll('#pfTools .sk-dot').forEach(d=>d.classList.remove('active'));
@@ -1513,8 +1611,8 @@
     if(pfLine){ pfErase=false; document.getElementById('pfEraserBtn').classList.remove('active'); }
     document.getElementById('pfLineBtn').classList.toggle('active', pfLine);
   }
-  function pfUndo(){ if(pfStrokes.length){ pfStrokes.pop(); pfDraw(); } }
-  function pfClearInk(){ pfStrokes=[]; pfCur=null; pfDraw(); }
+  function pfUndo(){ if(pfStrokes.length){ pfStrokes.pop(); pfInkRebuild(); pfDraw(); } }
+  function pfClearInk(){ pfStrokes=[]; pfCur=null; pfInkRebuild(); pfDraw(); }
 
   function pfDef(){ return PROOFS[pf.type]; }
 
@@ -1607,9 +1705,20 @@
     pfCtx.restore();
   }
 
+  // 화면에 실제로 내보내는 함수 — 캐시해 둔 레이어 두 장을 붙이기만 한다.
   function pfDraw(){
+    if(!pfCtx || !pfW || !pfH) return;   // 탭이 아직 안 열려 크기가 0일 때는 그리지 않는다
+    pfLayers();
+    pfBgPaint();
+    pfCtx.clearRect(0,0,pfW,pfH);
+    pfCtx.drawImage(pfBg,0,0);
+    pfCtx.drawImage(pfInk,0,0);
+    if(pfCur && pfLine) pfPaintStroke(pfCtx, pfCur, 0);   // 직선 미리보기
+  }
+
+  // 배경(흰 바탕 + 경계선 + 도형)만 그린다. pfBgPaint가 pfCtx를 pfBg로 바꿔 끼운 뒤 부른다.
+  function pfScene(){
     if(!pfCtx) return;
-    if(!pfW || !pfH) return;      // 탭이 아직 안 열려 크기가 0일 때는 그리지 않는다
     pfCtx.clearRect(0,0,pfW,pfH);
     pfCtx.fillStyle='#fff'; pfCtx.fillRect(0,0,pfW,pfH);
     pfGuide();
@@ -1624,15 +1733,14 @@
         const w=im.naturalWidth*sc, h=im.naturalHeight*sc;
         pfCtx.drawImage(im, (pfFW-w)/2, (pfH-h)/2, w, h);
       }
-      pfInkPaint();
       return;
     }
 
     const g=pfGeom();
-    if(def.quad){ pfDrawQuad(def.quad, s, ink, teal, blue, red); pfInkPaint(); return; }
-    if(pf.type==='iso'){ pfDrawIso(s,ink,teal,blue,red); pfInkPaint(); return; }
-    if(pf.type==='circum'){ pfDrawCircum(s,ink,teal,blue,red); pfInkPaint(); return; }
-    if(pf.type==='incenter'){ pfDrawIncenter(s,ink,teal,blue,red); pfInkPaint(); return; }
+    if(def.quad){ pfDrawQuad(def.quad, s, ink, teal, blue, red); return; }
+    if(pf.type==='iso'){ pfDrawIso(s,ink,teal,blue,red); return; }
+    if(pf.type==='circum'){ pfDrawCircum(s,ink,teal,blue,red); return; }
+    if(pf.type==='incenter'){ pfDrawIncenter(s,ink,teal,blue,red); return; }
 
     if(pf.type==='rha'){
       pfDrawTri(g.A,g.B,g.C,ink,3);
@@ -1644,7 +1752,6 @@
       // 주어진 조건만 표시한다(AB = DE, ∠B = ∠E). 나머지는 교사가 펜으로.
       pfTick(g.A,g.B,2); pfTick(g.D,g.E,2,teal);
       pfArc(g.B,g.A,g.C,34,blue,'∠B'); pfArc(g.E,g.D,g.F,34,blue,'∠E');
-      pfInkPaint();
       return;
     }
 
@@ -1668,7 +1775,6 @@
     }
 
     // 유도되는 표시(180°, 이등변 강조, ∠B=∠E 등)는 그리지 않는다 — 교사가 펜으로.
-    pfInkPaint();
   }
 
   /* ── 5.1 이등변삼각형의 성질 증명 ── */
@@ -1681,7 +1787,6 @@
     pfLabel(A,'A',ink,0,-24); pfLabel(B,'B',ink,-24,12); pfLabel(C,'C',ink,24,12);
     pfLabel(D,'D',teal,0,28);
     // 주어진 조건(AB = AC, ∠A의 이등분선)만 표시. 나머지는 교사가 펜으로.
-    pfInkPaint();
   }
 
   /* ── 5.3 외심 증명 ── */
@@ -1700,7 +1805,6 @@
     // 증명 단계에서는 주어진 조건만 표시(OA·OB·OC 등은 교사가 펜으로).
     // 외접원 개념을 도입하는 마지막 단계에서만 원을 그린다.
     if(s>=8) pfCircleFull(O, dist(O,A), blue);
-    pfInkPaint();
   }
 
   /* ── 5.4 내심 증명 ── */
@@ -1728,7 +1832,6 @@
     // ID=IE=IF 표시, IC, ∠ICE=∠ICF 등은 그리지 않는다 — 교사가 펜으로.
     // 내접원 개념을 도입하는 마지막 단계에서만 원을 그린다.
     if(s>=8) pfCircleFull(I, dist(I,E), blue);
-    pfInkPaint();
   }
   function pfCircleFull(O,r,color){
     pfCtx.save(); pfCtx.strokeStyle=color; pfCtx.lineWidth=2.6;
@@ -1852,8 +1955,8 @@
     pf.step=Math.max(0, Math.min(n-1, pf.step+d));
     pfRender();
   }
-  function pfReset(){ pf.step=0; pf.flip=0; pf.move=0; pfStrokes=[]; pfCur=null; pfRender(); }
-  function pfSetType(t){ pf.type=t; pf.step=0; pf.flip=0; pf.move=0; pfStrokes=[]; pfCur=null; pfSyncPicker(); pfRender(); }
+  function pfReset(){ pf.step=0; pf.flip=0; pf.move=0; pfStrokes=[]; pfCur=null; pfInkRebuild(); pfRender(); }
+  function pfSetType(t){ pf.type=t; pf.step=0; pf.flip=0; pf.move=0; pfStrokes=[]; pfCur=null; pfSyncPicker(); pfInkRebuild(); pfRender(); }
   function pfSyncPicker(){
     document.querySelectorAll('#pfPicker .chip').forEach(b=>b.classList.toggle('on', b.dataset.t===pf.type));
   }
@@ -2135,7 +2238,7 @@
 
     // 증명 화면 필기 입력
     bindDrawInput(pfCv, { down:pfDown, move:pfMove, up:pfUp,
-      cancel:()=>{ pfCur=null; pfDrag=false; pfDraw(); } });
+      cancel:pfCancel });
 
     document.getElementById('exTitle').textContent=exDef.title;
     document.getElementById('exSub').textContent=exDef.sub;
@@ -2143,7 +2246,7 @@
 
     // 문제 캔버스 입력
     bindDrawInput(cv, { down:startDraw, move:moveDraw, up:endDraw,
-      cancel:()=>{ curStroke=null; dragging=false; draw(); } });
+      cancel:cancelDraw });
 
     // 탐구 캔버스 입력
     bindDrawInput(exCv, { down:exDown, move:exMove, up:exUp,
