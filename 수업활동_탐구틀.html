@@ -64,7 +64,14 @@
 
   /* 캔버스 공통 */
   .sketch-wrap{position:relative; width:100%; aspect-ratio:4/3; background:#fff; border:1px solid var(--line); border-radius:12px; overflow:hidden; touch-action:none;}
-  .sketch-wrap canvas{width:100%; height:100%; display:block;}
+  .sketch-wrap canvas{width:100%; height:100%; display:block; touch-action:none;}
+  /* ★ 아이패드 펜: 이걸 안 막으면 사파리가 펜 드래그를 "글자 선택"으로 가져가 버린다.
+     그러면 글씨가 파랗게 선택되고, 사파리가 선택인지 필기인지 판단하는 동안
+     펜 입력이 늦게 전달돼서 "꾹 눌러야 써진다"고 느껴진다. */
+  .sketch-wrap, .sketch-wrap canvas, .sketch-tools{
+    user-select:none; -webkit-user-select:none; -webkit-touch-callout:none;}
+  /* 획을 긋는 동안에는 페이지 어디에서도 글자가 선택되지 않게 */
+  body.drawing, body.drawing *{user-select:none !important; -webkit-user-select:none !important;}
   .sketch-tools{position:absolute; left:50%; bottom:12px; transform:translateX(-50%); display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.96); border:1px solid var(--line); border-radius:24px; padding:7px 14px; box-shadow:0 4px 12px rgba(0,0,0,.1); flex-wrap:wrap; justify-content:center; max-width:94%;}
   .sk-colors{display:flex; gap:8px;}
   .sk-dot{width:22px; height:22px; border-radius:50%; cursor:pointer; border:2px solid #fff; box-shadow:0 0 0 1px var(--line);}
@@ -2181,6 +2188,21 @@
     }
     let activeId=null, activeType=null;
 
+    /* ★ 사파리가 펜 드래그를 글자 선택·돋보기·길게 눌러 메뉴로 가로채지 못하게 막는다.
+       (캔버스에만 건다 — 도구 버튼은 그대로 눌려야 하므로) */
+    el.addEventListener('selectstart', e=>e.preventDefault());
+    el.addEventListener('dragstart',   e=>e.preventDefault());
+    el.addEventListener('contextmenu', e=>e.preventDefault());
+    // 아이패드에서는 펜도 터치 이벤트를 같이 만든다. 그 기본 동작을 막아야
+    // 사파리가 "선택할지 그릴지" 재지 않고 첫 점부터 바로 전달한다.
+    el.addEventListener('touchstart', e=>e.preventDefault(), {passive:false});
+    el.addEventListener('touchmove',  e=>e.preventDefault(), {passive:false});
+
+    function markDrawing(on){
+      document.body.classList.toggle('drawing', on);
+      if(on){ const s=window.getSelection && window.getSelection(); if(s && s.removeAllRanges) s.removeAllRanges(); }
+    }
+
     el.addEventListener('pointerdown', e=>{
       if(e.pointerType==='pen'){
         penLastTs=Date.now();
@@ -2196,6 +2218,7 @@
         activeId=e.pointerId; activeType='mouse';
       }
       e.preventDefault();
+      markDrawing(true);
       try{ el.setPointerCapture(e.pointerId); }catch(err){}
       h.down(e);
     }, {passive:false});
@@ -2211,6 +2234,7 @@
       if(e.pointerId!==activeId) return;
       if(e.pointerType==='pen') penLastTs=Date.now();
       activeId=null; activeType=null;
+      markDrawing(false);
       h.up(e);
     }
     el.addEventListener('pointerup', end);

@@ -174,6 +174,17 @@ Playwright로 검증. Firebase는 mock 주입. **주의: mock의 forEach도 실�
 
 ## 11\. 변경 이력
 
+* **2026-10-02: 아이패드 펜이 "꾹 눌러야 써지고 글자가 파랗게 선택되던" 문제**
+  - 교사 증상: *"생각보다 꾹 눌러야 인식이 되고, 그러다 보니 글자가 파랗게 선택된다."* **두 증상은 원인이 하나다.**
+  - 원인: 사파리가 **펜 드래그를 "글자 선택" 제스처로 가져간다.** 선택인지 필기인지 판단하는 동안 펜 입력 전달이 늦어져서 "세게 눌러야 써진다"고 느껴지고, 판단이 선택 쪽으로 기울면 글자가 파래진다. `touch-action:none`만으로는 **안 막힌다** — 그건 스크롤·줌 제스처용이고 **텍스트 선택은 별개 경로**다.
+  - 해결(캔버스에만 적용, 도구 버튼은 그대로 눌려야 하므로):
+    - CSS: 캔버스·래퍼·도구막대에 `user-select:none` + `-webkit-user-select:none` + `-webkit-touch-callout:none`, 캔버스에도 `touch-action:none` 직접 지정.
+    - 획을 긋는 동안 `body.drawing`을 붙여 **페이지 전체**를 선택 불가로(펜이 캔버스를 벗어나도 뒷글자가 안 잡히게). `pointerdown`에서 붙이고 `pointerup`/`pointercancel`에서 뗀다.
+    - 캔버스에 `selectstart`·`dragstart`·`contextmenu` preventDefault.
+    - **★ 핵심**: 아이패드에서는 펜도 터치 이벤트를 같이 만든다. 캔버스에 `touchstart`·`touchmove`를 `{passive:false}`로 preventDefault 해야 사파리가 "선택할지 그릴지" 재지 않고 **첫 점부터 바로** 전달한다. (포인터 이벤트로 그리는 것과 충돌하지 않는다 — pointerdown은 이미 발생한 뒤다.)
+    - `pointerdown`에서 `getSelection().removeAllRanges()`로 이미 파랗게 된 선택을 즉시 해제.
+  - 검증: 캔버스/래퍼 `user-select:none`·`touch-action:none` 확인, selectstart·dragstart·contextmenu·touchstart·touchmove 전부 기본동작 차단됨, 필기 중 `body.drawing` 부착/해제, **움직임 없는 가벼운 탭 한 번으로도 점이 찍힘**(= 살짝 대도 인식), 선택돼 있던 글자가 펜을 대는 순간 해제됨, 도구 버튼 클릭 정상. 학생 \[문제 풀기] 캔버스와 \[탐구하기] 캔버스에도 같이 적용됨(`bindDrawInput` 공용).
+
 * **2026-10-02: 아이패드 필기 렉 제거 (★ 캔버스 필기 기능을 만들 때 반드시 지킬 것)**
   - 교사 증상: *"아이패드로 적을 때 렉이 걸린다."* 원인은 **쓸수록 느려지는 구조**였다. 펜이 움직일 때마다 `draw()`/`pfDraw()`가 **배경 도형 + 지금까지 쓴 모든 획의 모든 점**을 처음부터 다시 그렸다. 글씨가 쌓이면 한 점 찍는 비용이 같이 커진다(사실상 O(n²)). 아이패드 펜은 120Hz로 점을 보내므로 프레임 예산을 금방 넘긴다.
   - **해결: 레이어 2장 캐시 + 증분 그리기.**
