@@ -1235,7 +1235,13 @@
       ex.A={x:ex.B.x, y:ex.B.y-1.6*s};
       ex.C={x:ex.B.x+1.2*s, y:ex.B.y};
       ex7PythFix();
-    } else if(exMode==='similar' || exMode==='simcond'){
+    } else if(exMode==='similar'){
+      // ★ 2배 확대본이 화면에 들어와야 하므로 원래 삼각형은 작게 시작한다.
+      //   (크게 잡으면 복사본이 처음부터 화면 밖이라 드래그가 계속 되돌려진다)
+      ex.A={x:exW*0.20, y:exH*0.30};
+      ex.B={x:exW*0.11, y:exH*0.60};
+      ex.C={x:exW*0.29, y:exH*0.56};
+    } else if(exMode==='simcond'){
       ex.A={x:exW*0.22, y:exH*0.22};
       ex.B={x:exW*0.10, y:exH*0.76};
       ex.C={x:exW*0.38, y:exH*0.68};
@@ -1485,16 +1491,31 @@
         if(k==='B'){ const dx=ex.B.x-prev.B.x, dy=ex.B.y-prev.B.y;
                      ex.A={x:prev.A.x+dx, y:prev.A.y+dy}; ex.C={x:prev.C.x+dx, y:prev.C.y+dy}; }
         ex7PythFix();
-        // 세 정사각형이 화면을 벗어나면 되돌린다
-        const s=s_px(), a=ex.C.x-ex.B.x, b=ex.B.y-ex.A.y;
-        const okX = ex.B.x-b>14 && ex.C.x+Math.sqrt(a*a+b*b)*0.75<exW-14;
-        const okY = ex.A.y-Math.sqrt(a*a+b*b)*0.75>14 && ex.B.y+a<exH-14;
-        if(!okX || !okY){ ex.A=prev.A; ex.B=prev.B; ex.C=prev.C; }
+        // 세 정사각형이 화면을 벗어나면 되돌린다(이전 상태도 벗어나 있었다면 갇히지 않게 허용)
+        const fits=(P)=>{ const a=P.C.x-P.B.x, b=P.B.y-P.A.y, c=Math.sqrt(a*a+b*b)*0.75;
+          return P.B.x-b>14 && P.C.x+c<exW-14 && P.A.y-c>14 && P.B.y+a<exH-14; };
+        if(!fits(ex) && fits(prev)){ ex.A=prev.A; ex.B=prev.B; ex.C=prev.C; }
       }
       else if(exMode==='simcond'){ if(ex.opts.lock) ex7LockSim(); else ex7SnapSim(); }
       if(tooFlat(ex.A,ex.B,ex.C)){ ex.A=prev.A; ex.B=prev.B; ex.C=prev.C; }
-      // 7.1 — 2배 확대한 △DEF가 화면 밖으로 나가면 되돌린다
-      if(exMode==='similar' && !ex7SimFits()){ ex.A=prev.A; ex.B=prev.B; ex.C=prev.C; }
+      // 7.1 — 2배 확대한 △DEF가 화면 밖으로 나가면 되돌린다.
+      // ★ 단, 이미 벗어나 있던 상태라면 되돌리지 않는다. 안 그러면 한 번 벗어난 뒤
+      //   영영 움직일 수 없게 갇힌다(작게 줄이는 움직임까지 막혀 버린다).
+      if(exMode==='similar' && !ex7SimFits()){
+        const cur={...ex[k]}, was={...prev[k]};
+        ex[k]=was;
+        if(!ex7SimFits()){ ex[k]=cur; }           // 이전도 안 맞았으면 갇히지 않게 그냥 허용
+        else {
+          // 한계에서 튕겨 나가지 않도록, 갈 수 있는 데까지만 따라간다
+          let lo=0, hi=1;
+          for(let i=0;i<12;i++){
+            const m=(lo+hi)/2;
+            ex[k]={x:was.x+(cur.x-was.x)*m, y:was.y+(cur.y-was.y)*m};
+            if(ex7SimFits() && !tooFlat(ex.A,ex.B,ex.C)) lo=m; else hi=m;
+          }
+          ex[k]={x:was.x+(cur.x-was.x)*lo, y:was.y+(cur.y-was.y)*lo};
+        }
+      }
       exDraw(); exUpdate(); return;
     }
     else{
