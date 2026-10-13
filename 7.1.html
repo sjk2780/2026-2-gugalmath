@@ -557,21 +557,21 @@
     },
     /* ── 7단원 ── */
     similar: {
-      title: '닮은 두 도형을 만들어 봅시다',
-      sub: '왼쪽 △ABC의 꼭짓점을 끌어 보세요. 오른쪽 △DEF는 항상 2배로 확대한 도형입니다.',
+      title: '△ABC를 확대하면 △DEF와 합동이 될까요?',
+      sub: '점 A를 끌어 △ABC를 확대해 보세요. 몇 배로 하면 △DEF와 포개질까요?',
       tools: [
-        {k:'sides', label:'대응변의 길이'},
-        {k:'angles', label:'대응각의 크기'},
-        {k:'area',  label:'넓이'}
+        {k:'sides', label:'변의 길이'},
+        {k:'angles', label:'각의 크기'},
+        {k:'over',  label:'포개어 보기'}
       ]
     },
     simcond: {
-      title: '어떤 조건이면 닮은 삼각형일까요?',
-      sub: '왼쪽 △ABC의 꼭짓점을 끌어 오른쪽 △DEF와 닮은 모양을 만들어 보세요.',
+      title: '∠B는 그대로 두고 두 변을 늘여 봅시다',
+      sub: '점 D를 끌어 BA, BC를 같은 비율로 늘여 보세요. (점 A, C를 끌면 삼각형 모양이 바뀝니다)',
       tools: [
-        {k:'sides',  label:'세 쌍의 대응변의 비'},
-        {k:'angles', label:'세 쌍의 대응각'},
-        {k:'lock',   label:'닮은 모양으로 맞추기'}
+        {k:'de',     label:'DE 긋기'},
+        {k:'sides',  label:'변의 길이 비'},
+        {k:'angles', label:'대응각 비교'}
       ]
     },
     paraline: {
@@ -594,11 +594,11 @@
       ]
     },
     pythagoras: {
-      title: '직각삼각형의 세 변 위에 정사각형을 그려 봅시다',
-      sub: '점 A와 점 C를 끌어 두 변의 길이를 바꿔 보세요.',
+      title: '한 칸의 넓이가 1인 모눈에서 세 정사각형의 넓이를 세어 봅시다',
+      sub: '점 A와 점 C를 끌어 두 변의 길이를 바꿔 보세요. 칸 수를 세어 보세요.',
       tools: [
         {k:'sq',   label:'세 정사각형'},
-        {k:'area', label:'넓이 비교'}
+        {k:'area', label:'넓이 세기'}
       ]
     }
   };
@@ -852,7 +852,6 @@
       if(t.k==='mid' && exMode==='paraline' && ex.opts.mid) ex.t=0.5;   // 중점으로 맞추기
       else if(t.k==='lock' && ex.opts.lock){
         if(isQuadMode()) ex.D=add(sub(ex.A,ex.B), ex.C);   // 켜는 즉시 평행사변형으로
-        else if(exMode==='simcond') ex7LockSim();          // 켜는 즉시 닮은 모양으로
         else { ex.lockLen=dist(ex.A,ex.B); exApplyLock('C'); }
       }
     }
@@ -1168,48 +1167,58 @@
   function areaCm(P,Q,R){ return Math.round(areaPx(P,Q,R)/(s_px()*s_px())*10)/10; }
   function ratio1(a,b){ return b===0 ? '-' : '1 : ' + (Math.round(b/a*100)/100).toFixed(2); }
 
-  // 7.1 — 2배로 확대한 닮은 삼각형(△DEF)의 꼭짓점
-  function ex7SimCopy(){
-    const {A,B,C}=ex, k=2;
-    const G={x:(A.x+B.x+C.x)/3, y:(A.y+B.y+C.y)/3};
-    const O={x:exW*0.72, y:exH*0.50};
-    const f=p=>({x:O.x+(p.x-G.x)*k, y:O.y+(p.y-G.y)*k});
-    return {D:f(A), E:f(B), F:f(C)};
+  /* ── 모눈 (교과서 생각해요가 모눈 위에서 이루어진다) ── */
+  function exCell(){ return exW/18; }                       // 한 칸의 크기
+  function cp(cx,cy){ const g=exCell(); return {x:cx*g, y:cy*g}; }
+  function exGrid(){
+    const g=exCell();
+    exCtx.save(); exCtx.strokeStyle='#E8EDF2'; exCtx.lineWidth=1;
+    for(let x=0; x<=exW; x+=g){ exCtx.beginPath(); exCtx.moveTo(x+0.5,0); exCtx.lineTo(x+0.5,exH); exCtx.stroke(); }
+    for(let y=0; y<=exH; y+=g){ exCtx.beginPath(); exCtx.moveTo(0,y+0.5); exCtx.lineTo(exW,y+0.5); exCtx.stroke(); }
+    exCtx.restore();
   }
-  function ex7SimFits(){
-    const u=ex7SimCopy();
-    return [u.D,u.E,u.F].every(p=> p.x>22 && p.x<exW-22 && p.y>30 && p.y<exH-22);
+
+  /* ── 7.1 (교과서 200쪽 생각 1) ──
+     작은 △ABC를 일정한 비율로 확대해서 △DEF와 포개보고, 합동이 되는지 확인한다.
+     △DEF는 처음 △ABC를 정확히 2배 한 것이므로 k = 2.0 에서 완전히 포개진다. */
+  const SIM_BASE = { B:[2,9.5], C:[5,9.5], A:[3,6.5] };     // 칸 좌표
+  const SIM_BIG  = { E:[10,11], F:[16,11], D:[12,5] };      // = 2배
+  function ex7SimBase(){ return { A:cp(...SIM_BASE.A), B:cp(...SIM_BASE.B), C:cp(...SIM_BASE.C) }; }
+  function ex7SimBig(){ return { D:cp(...SIM_BIG.D), E:cp(...SIM_BIG.E), F:cp(...SIM_BIG.F) }; }
+  function ex7SimNow(){                                      // 지금 배율로 확대한 삼각형
+    const b=ex7SimBase(), k=ex.k||1, big=ex7SimBig();
+    const off = ex.opts.over ? {x:big.E.x-b.B.x, y:big.E.y-b.B.y} : {x:0,y:0};   // 포개어 보기
+    const f=p=>({x:b.B.x+(p.x-b.B.x)*k+off.x, y:b.B.y+(p.y-b.B.y)*k+off.y});
+    return { A:f(b.A), B:f(b.B), C:f(b.C) };
   }
-  // 7.2 — 오른쪽에 고정해 두는 비교용 삼각형
-  function ex7Fixed(){
-    return { D:{x:exW*0.76, y:exH*0.22}, E:{x:exW*0.62, y:exH*0.80}, F:{x:exW*0.93, y:exH*0.72} };
+
+  /* ── 7.2 (교과서 207쪽 생각해요) ──
+     ∠B는 그대로 두고 BA, BC를 같은 비율 k로 늘여 △DBE를 만든다. */
+  function ex7Ext(){
+    const k=ex.k||1.6;
+    return { D:{x:ex.B.x+(ex.A.x-ex.B.x)*k, y:ex.B.y+(ex.A.y-ex.B.y)*k},
+             E:{x:ex.B.x+(ex.C.x-ex.B.x)*k, y:ex.B.y+(ex.C.y-ex.B.y)*k}, k:k };
   }
-  // 7.2 — △ABC를 △DEF와 정확히 닮은 모양으로 맞춘다(A, B는 그대로, C만 옮김)
-  function ex7LockSim(){
-    const u=ex7Fixed(), A=ex.A, B=ex.B;
-    const de=dist(u.D,u.E); if(de<1) return;
-    const k=dist(A,B)/de;
-    const th=Math.atan2(B.y-A.y, B.x-A.x) - Math.atan2(u.E.y-u.D.y, u.E.x-u.D.x);
-    const vx=u.F.x-u.D.x, vy=u.F.y-u.D.y;
-    ex.C={ x:A.x + k*(vx*Math.cos(th)-vy*Math.sin(th)),
-           y:A.y + k*(vx*Math.sin(th)+vy*Math.cos(th)) };
+  /* 늘인 D, E가 화면 안에 들어오는 가장 큰 배율.
+     ★ 삼각형 모양을 바꿀 때 "되돌리기"로 막으면 점이 안 움직이는 것처럼 느껴진다.
+       대신 배율을 줄여서 받아 준다.
+     ★ 최소 배율은 1.2 — 1.0이 되면 D가 A와 완전히 겹쳐서 A를 영영 집을 수 없게 된다. */
+  const EXT_MIN_K = 1.2, EXT_MAX_K = 2.6;
+  function ex7ExtMaxK(){
+    const out=q=> q.x<10||q.x>exW-10||q.y<10||q.y>exH-10;
+    for(let i=Math.round(EXT_MAX_K*10); i>=Math.round(EXT_MIN_K*10); i--){
+      const kk=i/10;
+      const D={x:ex.B.x+(ex.A.x-ex.B.x)*kk, y:ex.B.y+(ex.A.y-ex.B.y)*kk};
+      const E={x:ex.B.x+(ex.C.x-ex.B.x)*kk, y:ex.B.y+(ex.C.y-ex.B.y)*kk};
+      if(!out(D) && !out(E)) return kk;
+    }
+    return EXT_MIN_K;
   }
-  /* 7.2 — ★ 5.1·6.3과 같은 함정 방지.
-     각은 1°, 비는 0.01 단위로 표시되는데 정밀도가 달라서,
-     "대응각은 같은데 대응변의 비는 1.08과 1.10으로 다르다"는 화면이 나올 수 있다.
-     그래서 "거의 닮음"이면 정확히 닮은 모양으로 붙여 버린다. → 같아 보이면 실제로도 같다. */
-  function ex7SnapSim(){
-    const u=ex7Fixed(), A=ex.A, B=ex.B, C=ex.C;
-    const cross=(P,Q,R)=>(Q.x-P.x)*(R.y-P.y)-(R.x-P.x)*(Q.y-P.y);
-    if(Math.sign(cross(A,B,C))!==Math.sign(cross(u.D,u.E,u.F))) return;   // 뒤집힌 경우는 건드리지 않는다
-    const a1=angleAt(A,B,C), a2=angleAt(B,C,A), a3=angleAt(C,A,B);
-    const d1=angleAt(u.D,u.E,u.F), d2=angleAt(u.E,u.F,u.D), d3=angleAt(u.F,u.D,u.E);
-    // ★ 기준은 "화면에 찍히는 값이 같은가" 그 자체. (raw 차이로 재면 반올림 폭보다 좁아 놓친다)
-    const e1=degv(a1)===degv(d1), e2=degv(a2)===degv(d2), e3=degv(a3)===degv(d3);
-    const rr=v=>Math.round(v*100)/100;
-    const r1=rr(dist(u.D,u.E)/dist(A,B)), r2=rr(dist(u.E,u.F)/dist(B,C)), r3=rr(dist(u.F,u.D)/dist(C,A));
-    const nearR=(r1===r2 && r2===r3);
-    if((e1&&e2)||(e2&&e3)||(e1&&e3)||nearR) ex7LockSim();
+  // 최소 배율에서도 D(또는 E)가 화면 안에 있도록 끄는 점 자체를 제한한다(되돌리지 않고 "거기까지만")
+  function ex7ExtClamp(P){
+    const m=EXT_MIN_K, B=ex.B, lo=12, hx=exW-12, hy=exH-12;
+    const cl=(v,b,l,h)=> Math.max(b+(l-b)/m, Math.min(b+(h-b)/m, v));
+    return { x:cl(P.x, B.x, lo, hx), y:cl(P.y, B.y, lo, hy) };
   }
 
   // 7.3 — D는 AB를 t로 내분, E는 AC를 같은 t로 내분 → DE ∥ BC 가 항상 성립
@@ -1218,31 +1227,29 @@
     return { D:{x:ex.A.x+(ex.B.x-ex.A.x)*t, y:ex.A.y+(ex.B.y-ex.A.y)*t},
              E:{x:ex.A.x+(ex.C.x-ex.A.x)*t, y:ex.A.y+(ex.C.y-ex.A.y)*t}, t:t };
   }
-  // 7.5 — 직각삼각형: B가 직각, A는 B 바로 위, C는 B 바로 오른쪽. 변의 길이는 0.1cm에 맞춘다
+  /* ── 7.5 (교과서 222쪽 생각해요) ──
+     한 칸의 넓이가 1인 모눈. 직각을 낀 두 변을 "칸 수"(정수)로만 바꿀 수 있게 해서
+     세 정사각형의 넓이가 항상 정수로 떨어지게 한다(교과서 표와 같은 모양). */
+  const PYTH_MAX = 4;                                        // 변의 최대 칸 수(세 정사각형이 화면에 다 들어오는 한계)
   function ex7PythFix(){
-    const s=s_px(), lo=0.8*s, hi=2.0*s, g=0.1*s;
-    const snap=v=>Math.round(Math.max(lo,Math.min(hi,v))/g)*g;
-    const b=snap(ex.B.y-ex.A.y), a=snap(ex.C.x-ex.B.x);
-    ex.A={x:ex.B.x, y:ex.B.y-b};
-    ex.C={x:ex.B.x+a, y:ex.B.y};
+    const g=exCell();
+    const snap=v=>Math.max(1, Math.min(PYTH_MAX, Math.round(v/g)));
+    ex.na = snap(ex.C.x-ex.B.x);                             // 가로 변(칸)
+    ex.nb = snap(ex.B.y-ex.A.y);                             // 세로 변(칸)
+    ex.A={x:ex.B.x, y:ex.B.y-ex.nb*g};
+    ex.C={x:ex.B.x+ex.na*g, y:ex.B.y};
   }
   function ex7Init(){
     if(exMode==='pythagoras'){
-      const s=s_px();
-      ex.B={x:exW*0.38, y:exH*0.70};
-      ex.A={x:ex.B.x, y:ex.B.y-1.6*s};
-      ex.C={x:ex.B.x+1.2*s, y:ex.B.y};
-      ex7PythFix();
+      ex.B=cp(5, 8.5); ex.na=2; ex.nb=1;
+      const g=exCell();
+      ex.A={x:ex.B.x, y:ex.B.y-ex.nb*g};
+      ex.C={x:ex.B.x+ex.na*g, y:ex.B.y};
     } else if(exMode==='similar'){
-      // ★ 2배 확대본이 화면에 들어와야 하므로 원래 삼각형은 작게 시작한다.
-      //   (크게 잡으면 복사본이 처음부터 화면 밖이라 드래그가 계속 되돌려진다)
-      ex.A={x:exW*0.20, y:exH*0.30};
-      ex.B={x:exW*0.11, y:exH*0.60};
-      ex.C={x:exW*0.29, y:exH*0.56};
+      const b=ex7SimBase();
+      ex.A=b.A; ex.B=b.B; ex.C=b.C; ex.k=1;
     } else if(exMode==='simcond'){
-      ex.A={x:exW*0.22, y:exH*0.22};
-      ex.B={x:exW*0.10, y:exH*0.76};
-      ex.C={x:exW*0.38, y:exH*0.68};
+      ex.B=cp(3,11.6); ex.A=cp(4.5,8.1); ex.C=cp(7,11.6); ex.k=1.6;
     } else {
       ex.A={x:exW*0.50, y:exH*0.16};
       ex.B={x:exW*0.20, y:exH*0.82};
@@ -1254,25 +1261,45 @@
   function ex7Draw(){
     const {A,B,C}=ex; if(!A) return;
     const ink='#1A1A1A', teal='#0D9488', blue='#2563EB', red='#DC2626';
+
+    /* ── 7.1 : 모눈 위에서 확대해 포개보기 ── */
+    if(exMode==='similar'){
+      exGrid();
+      const big=ex7SimBig(), s=ex7SimNow();
+      exSeg(big.D,big.E,teal,3); exSeg(big.E,big.F,teal,3); exSeg(big.F,big.D,teal,3);
+      exLabel(big.D,'D',teal,0,-14); exLabel(big.E,'E',teal,-16,16); exLabel(big.F,'F',teal,14,16);
+      exCtx.save(); exCtx.fillStyle='rgba(220,38,38,.14)';
+      exCtx.beginPath(); exCtx.moveTo(s.A.x,s.A.y); exCtx.lineTo(s.B.x,s.B.y); exCtx.lineTo(s.C.x,s.C.y);
+      exCtx.closePath(); exCtx.fill(); exCtx.restore();
+      exSeg(s.A,s.B,red,2.6); exSeg(s.B,s.C,red,2.6); exSeg(s.C,s.A,red,2.6);
+      exDot(s.A,red,6); exDot(s.B,red,4); exDot(s.C,red,4);
+      exLabel(s.A,'A',red,0,-14); exLabel(s.B,'B',red,-16,16); exLabel(s.C,'C',red,14,16);
+      if(ex.opts.angles){ exArcAt(s.B,s.A,s.C,24,blue); exArcAt(big.E,big.D,big.F,30,blue); }
+      return;
+    }
+    /* ── 7.2 : ∠B 고정, 두 변을 k배로 늘이기 ── */
+    if(exMode==='simcond'){
+      exGrid();
+      const u=ex7Ext();
+      exSeg(B,u.D,'#9CA3AF',1.6,[6,5]); exSeg(B,u.E,'#9CA3AF',1.6,[6,5]);   // 연장선
+      exSeg(u.D,B,teal,2.6); exSeg(B,u.E,teal,2.6);
+      if(ex.opts.de!==false) exSeg(u.D,u.E,teal,2.6);
+      exDot(u.D,teal,6); exDot(u.E,teal,5);
+      exLabel(u.D,'D',teal,0,-14); exLabel(u.E,'E',teal,14,16);
+      exSeg(A,B,ink,2.6); exSeg(B,C,ink,2.6); exSeg(C,A,ink,2.6);
+      exDot(A,ink,5); exDot(B,ink,5); exDot(C,ink,5);
+      exLabel(A,'A',ink,-18,-6); exLabel(B,'B',ink,-18,16); exLabel(C,'C',ink,2,20);
+      exArcAt(B,A,C,26,red);                                                 // 공통인 ∠B
+      if(ex.opts.angles){ exArcAt(A,B,C,20,blue); exArcAt(u.D,B,u.E,20,blue); }
+      return;
+    }
+
+    if(exMode==='pythagoras') exGrid();                       // 모눈 먼저
     exSeg(A,B,ink,2.5); exSeg(B,C,ink,2.5); exSeg(C,A,ink,2.5);
     exDot(A,ink,4); exDot(B,ink,4); exDot(C,ink,4);
     exLabel(A,'A',ink,0,-14); exLabel(B,'B',ink,-16,16); exLabel(C,'C',ink,14,16);
 
-    if(exMode==='similar'){
-      const u=ex7SimCopy();
-      exSeg(u.D,u.E,teal,2.5); exSeg(u.E,u.F,teal,2.5); exSeg(u.F,u.D,teal,2.5);
-      exDot(u.D,teal,4); exDot(u.E,teal,4); exDot(u.F,teal,4);
-      exLabel(u.D,'D',teal,0,-14); exLabel(u.E,'E',teal,-16,16); exLabel(u.F,'F',teal,14,16);
-      if(ex.opts.angles){ exArcAt(A,B,C,24,blue); exArcAt(u.D,u.E,u.F,34,blue); }
-    }
-    else if(exMode==='simcond'){
-      const u=ex7Fixed();
-      exSeg(u.D,u.E,teal,2.5); exSeg(u.E,u.F,teal,2.5); exSeg(u.F,u.D,teal,2.5);
-      exDot(u.D,teal,4); exDot(u.E,teal,4); exDot(u.F,teal,4);
-      exLabel(u.D,'D',teal,0,-14); exLabel(u.E,'E',teal,-16,16); exLabel(u.F,'F',teal,14,16);
-      if(ex.opts.angles){ exArcAt(A,B,C,24,blue); exArcAt(u.D,u.E,u.F,24,blue); }
-    }
-    else if(exMode==='paraline'){
+    if(exMode==='paraline'){
       const g=ex7DE();
       exSeg(g.D,g.E,teal,2.6);
       exDot(g.D,teal,5); exDot(g.E,teal,5);
@@ -1318,58 +1345,45 @@
   function ex7Update(){
     const {A,B,C}=ex; let items=[], msg='';
     if(exMode==='similar'){
-      const u=ex7SimCopy();
+      const b=ex7SimBase(), big=ex7SimBig(), s=ex7SimNow(), k=Math.round((ex.k||1)*10)/10;
+      items.push({k:'확대 비율', v:k.toFixed(1)+' 배', eq:(k===2)});
       if(ex.opts.sides!==false){
-        // ★ DE는 AB를 따로 반올림하지 않고 "표시된 AB의 2배"로 쓴다.
-        //   (따로 반올림하면 AB 5.1 / DE 10.1 처럼 2배가 아닌 것처럼 보인다)
-        const ab=cmv(dist(A,B)), bc=cmv(dist(B,C));
-        items.push({k:'AB', v:ab.toFixed(1)+' cm'});
-        items.push({k:'DE', v:(ab*2).toFixed(1)+' cm'});
-        items.push({k:'BC', v:bc.toFixed(1)+' cm'});
-        items.push({k:'EF', v:(bc*2).toFixed(1)+' cm'});
-        items.push({k:'AB : DE', v:'1 : 2.00', eq:true});
-        items.push({k:'BC : EF', v:'1 : 2.00', eq:true});
-        items.push({k:'CA : FD', v:'1 : 2.00', eq:true});
+        // ★ 확대한 변의 길이는 "표시된 원래 길이 × 배율"로 쓴다.
+        //   따로 반올림하면 2배인데도 2배로 안 보이는 화면이 나온다.
+        const ab=cmv(dist(b.A,b.B)), bc=cmv(dist(b.B,b.C));
+        items.push({k:'AB (확대 후)', v:(ab*k).toFixed(1)+' cm'});
+        items.push({k:'DE', v:(ab*2).toFixed(1)+' cm', eq:(k===2)});
+        items.push({k:'BC (확대 후)', v:(bc*k).toFixed(1)+' cm'});
+        items.push({k:'EF', v:(bc*2).toFixed(1)+' cm', eq:(k===2)});
       }
       if(ex.opts.angles){
-        items.push({k:'∠A', v:degv(angleAt(A,B,C))+'°'});
-        items.push({k:'∠D', v:degv(angleAt(u.D,u.E,u.F))+'°', eq:true});
+        items.push({k:'∠A', v:degv(angleAt(b.A,b.B,b.C))+'°'});
+        items.push({k:'∠D', v:degv(angleAt(big.D,big.E,big.F))+'°', eq:true});
       }
-      if(ex.opts.area){
-        const s1=areaCm(A,B,C);                       // △DEF도 같은 이유로 4배로 표시
-        items.push({k:'△ABC 넓이', v:s1.toFixed(1)+' cm²'});
-        items.push({k:'△DEF 넓이', v:(s1*4).toFixed(1)+' cm²'});
-        items.push({k:'넓이의 비', v:'1 : 4.00', eq:true});
-      }
-      msg='닮음비가 1 : 2이면 대응변의 길이의 비는 모두 1 : 2, 넓이의 비는 1 : 4입니다.';
+      if(k===2 && ex.opts.over) msg='완전히 포개집니다. 두 삼각형은 합동이고, 따라서 △ABC와 △DEF는 서로 닮은 도형입니다. (닮음비 1 : 2)';
+      else if(k===2) msg='변의 길이가 △DEF와 같아졌습니다. [포개어 보기]로 정말 합동인지 확인해 보세요.';
+      else if(ex.opts.over) msg='아직 포개지지 않습니다. 점 A를 끌어 배율을 바꿔 보세요.';
+      else msg='확대해도 각의 크기는 변하지 않습니다. 몇 배로 하면 △DEF와 포개질까요?';
     }
     else if(exMode==='simcond'){
-      const u=ex7Fixed();
-      // ★ 판정은 "표시되는 값"으로만 한다
-      const r1=Math.round(dist(u.D,u.E)/dist(A,B)*100)/100;
-      const r2=Math.round(dist(u.E,u.F)/dist(B,C)*100)/100;
-      const r3=Math.round(dist(u.F,u.D)/dist(C,A)*100)/100;
-      const a1=degv(angleAt(A,B,C)), a2=degv(angleAt(B,C,A)), a3=degv(angleAt(C,A,B));
-      const d1=degv(angleAt(u.D,u.E,u.F)), d2=degv(angleAt(u.E,u.F,u.D)), d3=degv(angleAt(u.F,u.D,u.E));
+      const u=ex7Ext(), k=Math.round(u.k*10)/10;
+      const ba=cmv(dist(B,A)), bc=cmv(dist(B,C)), ac=cmv(dist(A,C));
+      items.push({k:'늘인 비율', v:k.toFixed(1)+' 배'});
       if(ex.opts.sides!==false){
-        items.push({k:'AB : DE', v:'1 : '+r1.toFixed(2)});
-        items.push({k:'BC : EF', v:'1 : '+r2.toFixed(2)});
-        items.push({k:'CA : FD', v:'1 : '+r3.toFixed(2)});
+        items.push({k:'BA / BD', v:ba.toFixed(1)+' / '+(ba*k).toFixed(1)+' cm'});
+        items.push({k:'BC / BE', v:bc.toFixed(1)+' / '+(bc*k).toFixed(1)+' cm'});
+        items.push({k:'BA : BD', v:'1 : '+k.toFixed(1), eq:true});
+        items.push({k:'BC : BE', v:'1 : '+k.toFixed(1), eq:true});
+      }
+      if(ex.opts.de!==false){
+        items.push({k:'AC / DE', v:ac.toFixed(1)+' / '+(ac*k).toFixed(1)+' cm'});
+        items.push({k:'AC : DE', v:'1 : '+k.toFixed(1), eq:true});
       }
       if(ex.opts.angles){
-        items.push({k:'∠A / ∠D', v:a1+'° / '+d1+'°', eq:(a1===d1)});
-        items.push({k:'∠B / ∠E', v:a2+'° / '+d2+'°', eq:(a2===d2)});
-        items.push({k:'∠C / ∠F', v:a3+'° / '+d3+'°', eq:(a3===d3)});
+        items.push({k:'∠A / ∠D', v:degv(angleAt(A,B,C))+'° / '+degv(angleAt(u.D,B,u.E))+'°', eq:true});
+        items.push({k:'∠C / ∠E', v:degv(angleAt(C,A,B))+'° / '+degv(angleAt(u.E,u.D,B))+'°', eq:true});
       }
-      const sss=(r1===r2 && r2===r3);
-      const aa =((a1===d1 && a2===d2) || (a2===d2 && a3===d3) || (a1===d1 && a3===d3));
-      const sas=((r1===r2 && a2===d2) || (r2===r3 && a3===d3) || (r1===r3 && a1===d1));
-      let kind='닮음이 아닙니다';
-      if(sss) kind='닮음입니다 (SSS 닮음)';
-      else if(sas) kind='닮음입니다 (SAS 닮음)';
-      else if(aa)  kind='닮음입니다 (AA 닮음)';
-      items.push({k:'판정', v:kind, eq:(sss||sas||aa)});
-      if(sss||sas||aa) msg='△ABC ∽ △DEF 입니다. 세 쌍의 대응각의 크기도 각각 같은지 확인해 보세요.';
+      msg='∠B는 공통이고 BA : BD = BC : BE 이므로 △ABC ∽ △DBE 입니다 (SAS 닮음). 그래서 DE도 AC의 '+k.toFixed(1)+'배가 됩니다.';
     }
     else if(exMode==='paraline'){
       const g=ex7DE(), t=g.t;
@@ -1405,19 +1419,17 @@
       else if(shown===2) msg='두 중선이 만나는 점을 찾았습니다. 나머지 중선도 이 점을 지날까요?';
     }
     else if(exMode==='pythagoras'){
-      const a=cmv(dist(B,C)), b=cmv(dist(A,B));
-      const c2=Math.round((a*a+b*b)*100)/100;           // c² 는 a²+b² 로 정의 → 표시가 어긋날 수 없다
-      const c=Math.round(Math.sqrt(c2)*10)/10;
-      items.push({k:'a (BC)', v:a.toFixed(1)+' cm'});
-      items.push({k:'b (AB)', v:b.toFixed(1)+' cm'});
-      items.push({k:'c (AC)', v:'≈ '+c.toFixed(1)+' cm'});
+      // 한 칸 = 1 이므로 넓이가 전부 정수로 떨어진다(교과서 표와 같은 모양)
+      const a=ex.na||2, b=ex.nb||1;
+      items.push({k:'a (BC)', v:a+' 칸'});
+      items.push({k:'b (AB)', v:b+' 칸'});
       if(ex.opts.area!==false){
-        items.push({k:'a²', v:(Math.round(a*a*100)/100).toFixed(2)});
-        items.push({k:'b²', v:(Math.round(b*b*100)/100).toFixed(2)});
-        items.push({k:'a² + b²', v:c2.toFixed(2), eq:true});
-        items.push({k:'c²', v:c2.toFixed(2), eq:true});
+        items.push({k:'㉮ a² (BC 위)', v:(a*a)+''});
+        items.push({k:'㉯ b² (AB 위)', v:(b*b)+''});
+        items.push({k:'㉮ + ㉯', v:(a*a+b*b)+'', eq:true});
+        items.push({k:'㉰ c² (빗변 위)', v:(a*a+b*b)+'', eq:true});
       }
-      msg='두 변 위의 정사각형의 넓이를 더하면 빗변 위의 정사각형의 넓이와 같습니다. 즉, a² + b² = c² 입니다.';
+      msg='㉮의 넓이 + ㉯의 넓이 = ㉰의 넓이 입니다. 즉, a² + b² = c² 입니다.';
     }
     return {items, msg};
   }
@@ -1448,9 +1460,21 @@
       const g=ex7DE();
       if(dist(p,g.D)<30){ ex.drag='D7'; return; }
     }
+    if(exMode==='similar'){                  // 7.1 — 점 A를 끌어 배율을 바꾼다
+      const s=ex7SimNow();
+      if(dist(p,s.A)<34){ ex.drag='K1'; return; }
+      return;                                 // 나머지 점은 고정
+    }
+    if(exMode==='simcond'){                  // 7.2 — 점 D를 끌면 배율, A·C를 끌면 모양
+      // ★ 가장 가까운 것을 고른다. 같은 거리면 A·C가 이긴다(D가 A를 가려 못 집는 일 방지)
+      const u=ex7Ext();
+      const cand=[['A',dist(p,ex.A)], ['C',dist(p,ex.C)], ['K2',Math.min(dist(p,u.D), dist(p,u.E))]];
+      cand.sort((x,y)=>x[1]-y[1]);
+      if(cand[0][1]<32) ex.drag=cand[0][0];
+      return;                                 // B(꼭짓점)는 고정 — ∠B를 유지하기 위해
+    }
     let best=null, bd=1e9;
-    const keys = (exMode==='pythagoras') ? ['A','B','C'] : ['A','B','C'];
-    keys.forEach(k=>{ const d=dist(p,ex[k]); if(d<bd){ bd=d; best=k; } });
+    ['A','B','C'].forEach(k=>{ const d=dist(p,ex[k]); if(d<bd){ bd=d; best=k; } });
     if(bd<30) ex.drag=best;
   }
   function exMove(e){
@@ -1473,6 +1497,20 @@
       exDraw(); exUpdate();
       return;
     }
+    if(ex.drag==='K1'){                       // 7.1 — 점 A와 B 사이 거리로 배율을 정한다(0.1 단위)
+      const b=ex7SimBase(), big=ex7SimBig();
+      const org = ex.opts.over ? big.E : b.B;                  // 포개어 보기 중이면 기준점이 E
+      const base = dist(b.A, b.B);
+      let k = base>0 ? dist(p, org)/base : 1;
+      ex.k = Math.max(0.5, Math.min(3.0, Math.round(k*10)/10));
+      exDraw(); exUpdate(); return;
+    }
+    if(ex.drag==='K2'){                       // 7.2 — D를 반직선 BA 위에서 끌어 배율을 정한다
+      const base = dist(ex.A, ex.B);
+      let k = base>0 ? dist(p, ex.B)/base : 1.6;
+      ex.k = Math.max(EXT_MIN_K, Math.min(ex7ExtMaxK(), Math.round(k*10)/10));
+      exDraw(); exUpdate(); return;
+    }
     if(ex.drag==='D7'){                       // 7.3 — D를 변 AB 위에서만 움직인다
       const d=sub(ex.B,ex.A), L2=d.x*d.x+d.y*d.y;
       let t = L2>0 ? ((p.x-ex.A.x)*d.x+(p.y-ex.A.y)*d.y)/L2 : 0.4;
@@ -1494,26 +1532,9 @@
           return P.B.x-b>14 && P.C.x+c<exW-14 && P.A.y-c>14 && P.B.y+a<exH-14; };
         if(!fits(ex) && fits(prev)){ ex.A=prev.A; ex.B=prev.B; ex.C=prev.C; }
       }
-      else if(exMode==='simcond'){ if(ex.opts.lock) ex7LockSim(); else ex7SnapSim(); }
+      // 7.2 — 모양을 바꾸면 되돌리지 말고, 끄는 점을 제한하고 배율을 줄여서 받아 준다
+      if(exMode==='simcond'){ ex[k]=ex7ExtClamp(ex[k]); ex.k=Math.max(EXT_MIN_K, Math.min(ex.k||1.6, ex7ExtMaxK())); }
       if(tooFlat(ex.A,ex.B,ex.C)){ ex.A=prev.A; ex.B=prev.B; ex.C=prev.C; }
-      // 7.1 — 2배 확대한 △DEF가 화면 밖으로 나가면 되돌린다.
-      // ★ 단, 이미 벗어나 있던 상태라면 되돌리지 않는다. 안 그러면 한 번 벗어난 뒤
-      //   영영 움직일 수 없게 갇힌다(작게 줄이는 움직임까지 막혀 버린다).
-      if(exMode==='similar' && !ex7SimFits()){
-        const cur={...ex[k]}, was={...prev[k]};
-        ex[k]=was;
-        if(!ex7SimFits()){ ex[k]=cur; }           // 이전도 안 맞았으면 갇히지 않게 그냥 허용
-        else {
-          // 한계에서 튕겨 나가지 않도록, 갈 수 있는 데까지만 따라간다
-          let lo=0, hi=1;
-          for(let i=0;i<12;i++){
-            const m=(lo+hi)/2;
-            ex[k]={x:was.x+(cur.x-was.x)*m, y:was.y+(cur.y-was.y)*m};
-            if(ex7SimFits() && !tooFlat(ex.A,ex.B,ex.C)) lo=m; else hi=m;
-          }
-          ex[k]={x:was.x+(cur.x-was.x)*lo, y:was.y+(cur.y-was.y)*lo};
-        }
-      }
       exDraw(); exUpdate(); return;
     }
     else{
