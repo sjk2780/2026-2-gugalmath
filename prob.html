@@ -82,12 +82,12 @@ section.view.on{display:grid; grid-template-columns:minmax(380px,0.86fr) 1.14fr;
 .dbl{font-size:17px; font-weight:800; color:#fff; background:var(--hot); border-radius:999px; padding:5px 13px;}
 
 /* 버튼 */
-.btns{display:flex; flex-wrap:wrap; gap:9px; justify-content:center;}
+.btns{display:flex; flex-wrap:wrap; gap:7px; justify-content:center;}
 .btn{
   font:700 18px/1 Pretendard,sans-serif; color:#fff; background:var(--ink);
   border:none; border-radius:12px; padding:15px 21px; cursor:pointer;
 }
-.btn.sub{color:var(--ink); background:#fff; border:1.5px solid var(--line); font-weight:600;}
+.btn.sub{color:var(--ink); background:#fff; border:1.5px solid var(--line); font-weight:600; padding:15px 13px;}
 .btn:disabled{opacity:.35;}
 .btn:active{transform:translateY(1px);}
 
@@ -152,6 +152,7 @@ canvas{width:100%; height:100%; display:block; touch-action:none;}
         <button class="btn sub" onclick="coinRun(50)">50번</button>
         <button class="btn sub" onclick="coinRun(100)">100번</button>
         <button class="btn sub" onclick="coinRun(1000)">1000번</button>
+        <button class="btn sub" onclick="coinRun(10000)">1만 번</button>
       </div>
       <div class="counts">
         <div class="cbox"><div class="k">던진 횟수</div><div class="v" id="cN">0</div></div>
@@ -189,6 +190,7 @@ canvas{width:100%; height:100%; display:block; touch-action:none;}
         <button class="btn sub" onclick="diceRun(10)">10번</button>
         <button class="btn sub" onclick="diceRun(100)">100번</button>
         <button class="btn sub" onclick="diceRun(1000)">1000번</button>
+        <button class="btn sub" onclick="diceRun(10000)">1만 번</button>
       </div>
       <div class="counts">
         <div class="cbox"><div class="k">굴린 횟수</div><div class="v" id="dN">0</div></div>
@@ -360,7 +362,7 @@ function coinChart(){
   ctx.beginPath(); ctx.rect(x0,y0,x1-x0,y1-y0); ctx.clip();
   // 전체 흐름(연한 선)
   if(C.samp.length>1){
-    ctx.strokeStyle='#C7D2FE'; ctx.lineWidth=1.6; ctx.beginPath();
+    ctx.strokeStyle='#93C5FD'; ctx.lineWidth=1.8; ctx.beginPath();
     C.samp.forEach((p,i)=>{ const x=X(p[0]), y=Y(p[1]); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
     ctx.stroke();
   }
