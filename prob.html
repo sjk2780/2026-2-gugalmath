@@ -1,0 +1,541 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>확률 실험 — 동전 던지기 / 주사위 두 개</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+:root{
+  --ink:#1A1A1A; --sub:#6B7280; --line:#E5E7EB; --bg:#FFFFFF; --soft:#F8FAFC;
+  --ok:#059669; --hot:#E11D48; --blue:#2563EB; --gold:#D97706;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; padding:0; height:100%;}
+body{
+  font-family:Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
+  color:var(--ink); background:var(--bg);
+  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  overscroll-behavior:none;
+}
+.app{height:100vh; height:100dvh; display:flex; flex-direction:column; max-width:1720px; margin:0 auto; padding:10px 16px 14px;}
+
+header.top{display:flex; align-items:center; gap:10px; padding:2px 0 10px; flex:0 0 auto;}
+.tabs{display:flex; gap:8px;}
+.tab{
+  font:600 19px/1 Pretendard,sans-serif; color:var(--sub); background:#fff;
+  border:1.5px solid var(--line); border-radius:999px; padding:11px 22px; cursor:pointer;
+}
+.tab.on{color:#fff; background:var(--ink); border-color:var(--ink);}
+.spacer{flex:1;}
+.ghost{
+  font:600 16px/1 Pretendard,sans-serif; color:var(--sub); background:#fff;
+  border:1.5px solid var(--line); border-radius:10px; padding:10px 16px; cursor:pointer;
+}
+.ghost:active{background:var(--soft);}
+
+main{flex:1; min-height:0;}
+section.view{display:none; height:100%;}
+section.view.on{display:grid; grid-template-columns:minmax(380px,0.86fr) 1.14fr; gap:18px;}
+
+.panel{border:1.5px solid var(--line); border-radius:16px; padding:16px 18px; display:flex; flex-direction:column; min-height:0; min-width:0;}
+.panel h2{margin:0 0 2px; font-size:17px; font-weight:700; letter-spacing:-.2px;}
+.panel .hint{margin:0 0 10px; font-size:14px; color:var(--sub); line-height:1.5;}
+
+/* ---------- 왼쪽 무대 ---------- */
+.stage{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; min-height:0;}
+
+/* 동전 */
+.coin-wrap{perspective:900px; height:172px; display:flex; align-items:center;}
+.coin{
+  width:148px; height:148px; position:relative; transform-style:preserve-3d;
+  transition:transform .66s cubic-bezier(.3,.7,.3,1);
+}
+.coin .face{
+  position:absolute; inset:0; border-radius:50%; backface-visibility:hidden;
+  display:flex; align-items:center; justify-content:center;
+  font-size:46px; font-weight:800; letter-spacing:-1px;
+}
+.coin .front{background:linear-gradient(145deg,#FDE68A,#F59E0B); color:#7C2D12; border:5px solid #D97706;}
+.coin .back{background:linear-gradient(145deg,#E5E7EB,#9CA3AF); color:#1F2937; border:5px solid #6B7280; transform:rotateY(180deg);}
+.result{font-size:30px; font-weight:800; height:38px; letter-spacing:-.5px;}
+.result.head{color:var(--gold);} .result.tail{color:#4B5563;}
+
+/* 주사위 */
+.dice-row{display:flex; gap:22px; align-items:center; justify-content:center;}
+.die{
+  width:124px; height:124px; border-radius:22px; background:#fff; border:3px solid var(--ink);
+  box-shadow:0 6px 0 rgba(0,0,0,.08); padding:14px;
+  display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr);
+}
+.die.roll{animation:shake .16s linear infinite;}
+@keyframes shake{
+  0%{transform:translateY(0) rotate(-7deg);} 25%{transform:translateY(-12px) rotate(6deg);}
+  50%{transform:translateY(0) rotate(8deg);} 75%{transform:translateY(-8px) rotate(-5deg);} 100%{transform:translateY(0) rotate(-7deg);}
+}
+.pip{width:21px; height:21px; border-radius:50%; background:var(--ink); align-self:center; justify-self:center;}
+.die.d2 .pip{background:var(--hot);}
+.sum-line{font-size:32px; font-weight:800; letter-spacing:-.5px; height:42px; display:flex; align-items:center; gap:12px;}
+.sum-line .eq{color:var(--sub); font-weight:600;}
+.sum-line .big{font-size:42px; color:var(--blue);}
+.dbl{font-size:17px; font-weight:800; color:#fff; background:var(--hot); border-radius:999px; padding:5px 13px;}
+
+/* 버튼 */
+.btns{display:flex; flex-wrap:wrap; gap:9px; justify-content:center;}
+.btn{
+  font:700 18px/1 Pretendard,sans-serif; color:#fff; background:var(--ink);
+  border:none; border-radius:12px; padding:15px 21px; cursor:pointer;
+}
+.btn.sub{color:var(--ink); background:#fff; border:1.5px solid var(--line); font-weight:600;}
+.btn:disabled{opacity:.35;}
+.btn:active{transform:translateY(1px);}
+
+/* 숫자판 */
+.counts{display:flex; gap:10px; width:100%; margin-top:4px;}
+.cbox{flex:1; border:1.5px solid var(--line); border-radius:12px; padding:9px 4px; text-align:center; background:var(--soft);}
+.cbox .k{font-size:13px; color:var(--sub); font-weight:600;}
+.cbox .v{font-size:27px; font-weight:800; letter-spacing:-.5px; font-variant-numeric:tabular-nums;}
+.cbox.hl .v{color:var(--blue);}
+
+/* ---------- 오른쪽 ---------- */
+.right{display:flex; flex-direction:column; gap:12px; min-height:0;}
+table{width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; table-layout:fixed;}
+th,td{border:1px solid var(--line); text-align:center; padding:8px 3px; font-size:16px; white-space:nowrap; overflow:hidden;}
+th{background:var(--soft); font-weight:700; font-size:15px; color:#374151;}
+td.empty{color:#D1D5DB;}
+td.rel{font-weight:700;}
+th.rowh{background:var(--soft); width:116px; font-size:14px;}
+table.t12 th,table.t12 td{font-size:14px; padding:7px 1px;}
+table.t12 th.rowh{width:104px; font-size:13px;}
+.chartbox{flex:1; min-height:150px; position:relative;}
+canvas{width:100%; height:100%; display:block; touch-action:none;}
+.cap{font-size:13px; color:var(--sub); margin:2px 0 0;}
+
+@media (max-width:1000px){
+  section.view.on{grid-template-columns:1fr; grid-template-rows:auto 1fr; overflow:auto;}
+}
+@media (max-height:760px){
+  .coin{width:116px;height:116px;} .coin-wrap{height:138px;} .coin .face{font-size:38px;}
+  .die{width:100px;height:100px;padding:11px;} .pip{width:17px;height:17px;}
+  .cbox .v{font-size:23px;} .btn{padding:12px 18px; font-size:17px;}
+  .panel{padding:12px 14px;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header class="top">
+  <div class="tabs">
+    <button class="tab on" id="tabCoin" onclick="go('coin')">동전 던지기</button>
+    <button class="tab" id="tabDice" onclick="go('dice')">주사위 두 개</button>
+  </div>
+  <div class="spacer"></div>
+  <button class="ghost" onclick="resetCur()">처음부터</button>
+</header>
+
+<main>
+
+<!-- ============ 동전 ============ -->
+<section class="view on" id="vCoin">
+  <div class="panel">
+    <h2>동전 한 개를 여러 번 던져 보자</h2>
+    <p class="hint">던진 횟수가 많아질수록 앞면이 나온 상대도수가 어떤 값에 가까워지는지 살펴보세요.</p>
+    <div class="stage">
+      <div class="coin-wrap"><div class="coin" id="coin">
+        <div class="face front">앞</div><div class="face back">뒤</div>
+      </div></div>
+      <div class="result" id="coinRes">&nbsp;</div>
+      <div class="btns">
+        <button class="btn" id="cb1" onclick="coinRun(1)">1번 던지기</button>
+        <button class="btn sub" onclick="coinRun(50)">50번</button>
+        <button class="btn sub" onclick="coinRun(100)">100번</button>
+        <button class="btn sub" onclick="coinRun(1000)">1000번</button>
+      </div>
+      <div class="counts">
+        <div class="cbox"><div class="k">던진 횟수</div><div class="v" id="cN">0</div></div>
+        <div class="cbox"><div class="k">앞면</div><div class="v" id="cH">0</div></div>
+        <div class="cbox"><div class="k">뒷면</div><div class="v" id="cT">0</div></div>
+        <div class="cbox hl"><div class="k">앞면의 상대도수</div><div class="v" id="cR">–</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel right">
+    <table>
+      <tr><th class="rowh">던진 횟수(번)</th><th>50</th><th>100</th><th>200</th><th>400</th><th>600</th><th>800</th><th>1000</th></tr>
+      <tr id="rowH"><th class="rowh">앞면이 나온 횟수</th></tr>
+      <tr id="rowR"><th class="rowh">상대도수</th></tr>
+    </table>
+    <p class="cap">상대도수는 반올림하여 소수점 아래 셋째 자리까지 나타냄.</p>
+    <div class="chartbox"><canvas id="cvCoin"></canvas></div>
+  </div>
+</section>
+
+<!-- ============ 주사위 ============ -->
+<section class="view" id="vDice">
+  <div class="panel">
+    <h2>주사위 두 개를 굴려 두 수의 합을 보자</h2>
+    <p class="hint">합이 2부터 12까지 나올 수 있어요. 어떤 합이 가장 자주 나오는지 세어 보세요.</p>
+    <div class="stage">
+      <div class="dice-row">
+        <div class="die d1" id="die1"></div>
+        <div class="die d2" id="die2"></div>
+      </div>
+      <div class="sum-line" id="sumLine">&nbsp;</div>
+      <div class="btns">
+        <button class="btn" id="db1" onclick="diceRun(1)">굴리기</button>
+        <button class="btn sub" onclick="diceRun(10)">10번</button>
+        <button class="btn sub" onclick="diceRun(100)">100번</button>
+        <button class="btn sub" onclick="diceRun(1000)">1000번</button>
+      </div>
+      <div class="counts">
+        <div class="cbox"><div class="k">굴린 횟수</div><div class="v" id="dN">0</div></div>
+        <div class="cbox"><div class="k">가장 많이 나온 합</div><div class="v" id="dTop">–</div></div>
+        <div class="cbox"><div class="k">더블</div><div class="v" id="dDbl">0</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel right">
+    <div class="chartbox"><canvas id="cvDice"></canvas></div>
+    <table class="t12">
+      <tr id="rowS"><th class="rowh">두 수의 합</th></tr>
+      <tr id="rowC"><th class="rowh">나온 횟수</th></tr>
+      <tr id="rowD"><th class="rowh">상대도수</th></tr>
+      <tr id="rowP"><th class="rowh">확률(경우의 수)</th></tr>
+    </table>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+'use strict';
+
+/* ================= 공통 ================= */
+function $(id){ return document.getElementById(id); }
+function r3(x){ return Math.round(x*1000)/1000; }
+function f3(x){ return r3(x).toFixed(3); }
+let cur='coin';
+function go(v){
+  cur=v;
+  $('tabCoin').classList.toggle('on', v==='coin');
+  $('tabDice').classList.toggle('on', v==='dice');
+  $('vCoin').classList.toggle('on', v==='coin');
+  $('vDice').classList.toggle('on', v==='dice');
+  sizeAll();
+}
+function resetCur(){ if(cur==='coin') coinReset(); else diceReset(); }
+
+/* 캔버스 해상도 */
+function fit(cv){
+  const r=cv.getBoundingClientRect();
+  const d=Math.min(window.devicePixelRatio||1, 2.5);
+  const w=Math.max(10,Math.round(r.width)), h=Math.max(10,Math.round(r.height));
+  if(cv.width!==Math.round(w*d) || cv.height!==Math.round(h*d)){
+    cv.width=Math.round(w*d); cv.height=Math.round(h*d);
+  }
+  const ctx=cv.getContext('2d');
+  ctx.setTransform(d,0,0,d,0,0);
+  return {ctx,w,h};
+}
+
+/* ================= 동전 ================= */
+const CK=[50,100,200,400,600,800,1000];
+let C={n:0,h:0,snap:{},samp:[],busy:false,flip:0};
+
+function coinReset(){
+  C={n:0,h:0,snap:{},samp:[],busy:false,flip:0};
+  $('coin').style.transform='rotateY(0deg)';
+  $('coinRes').textContent=' '; $('coinRes').className='result';
+  coinPaint();
+}
+function coinOne(){
+  const head = Math.random() < 0.5;
+  C.n++; if(head) C.h++;
+  if(CK.indexOf(C.n)>=0) C.snap[C.n]=C.h;
+  const step = C.n<=120 ? 1 : Math.ceil(C.n/250);
+  if(C.n%step===0 || CK.indexOf(C.n)>=0) C.samp.push([C.n, C.h/C.n]);
+  return head;
+}
+function coinRun(k){
+  if(C.busy) return;
+  if(k===1){
+    C.busy=true;
+    const head=coinOne();
+    // 반 바퀴 수의 홀짝이 보이는 면을 정한다: 짝수=앞, 홀수=뒤.
+    // 직전 상태에 더하는 "상대값"으로 하면 뒷면 다음 앞면에서 면과 글자가 어긋난다.
+    C.flip += 4;
+    if((C.flip % 2) !== (head ? 0 : 1)) C.flip += 1;
+    $('coin').style.transform='rotateY('+(C.flip*180)+'deg)';
+    const res=$('coinRes');
+    res.textContent=' '; res.className='result';
+    setTimeout(()=>{
+      res.textContent = head ? '앞면' : '뒷면';
+      res.className = 'result ' + (head?'head':'tail');
+      coinPaint(); C.busy=false;
+    }, 680);
+    return;
+  }
+  C.busy=true;
+  // 프레임 수가 아니라 "경과 시간"으로 진행 → 느린 기기·백그라운드에서도 DUR 안에 반드시 끝난다
+  const DUR=1200, t0=performance.now();
+  let done=0, head=false;
+  const tick=()=>{
+    const el=performance.now()-t0;
+    const want = el>=DUR ? k : Math.max(1, Math.ceil(k*el/DUR));
+    for(; done<want; done++) head=coinOne();
+    $('coinRes').textContent = head ? '앞면' : '뒷면';
+    $('coinRes').className = 'result ' + (head?'head':'tail');
+    $('coin').style.transition='none';
+    $('coin').style.transform='rotateY('+(head?0:180)+'deg)';
+    coinPaint();
+    if(done<k) setTimeout(tick,16);
+    else { C.flip = head?0:1; setTimeout(()=>{$('coin').style.transition='';},30); C.busy=false; }
+  };
+  setTimeout(tick,0);
+}
+function coinPaint(){
+  $('cN').textContent=C.n;
+  $('cH').textContent=C.h;
+  $('cT').textContent=C.n-C.h;
+  $('cR').textContent = C.n? f3(C.h/C.n) : '–';
+  // 표
+  const rh=$('rowH'), rr=$('rowR');
+  while(rh.children.length>1) rh.removeChild(rh.lastChild);
+  while(rr.children.length>1) rr.removeChild(rr.lastChild);
+  CK.forEach(k=>{
+    const a=document.createElement('td'), b=document.createElement('td');
+    if(C.snap[k]!==undefined){
+      a.textContent=C.snap[k];
+      b.textContent=f3(C.snap[k]/k); b.className='rel';
+    }else{ a.textContent='·'; a.className='empty'; b.textContent='·'; b.className='empty'; }
+    rh.appendChild(a); rr.appendChild(b);
+  });
+  coinChart();
+}
+function coinAxMax(){
+  const L=[1000,2000,5000,10000,20000,50000,100000];
+  for(const v of L) if(C.n<=v) return v;
+  return Math.ceil(C.n/100000)*100000;
+}
+function coinChart(){
+  const cv=$('cvCoin'); if(!cv.clientWidth) return;
+  const {ctx,w,h}=fit(cv);
+  ctx.clearRect(0,0,w,h);
+  const L=52,R=14,T=28,B=46;
+  const x0=L, x1=w-R, y0=T, y1=h-B;
+  const xmax=coinAxMax(), ymin=0.3, ymax=0.7;
+  const X=n=> x0+(x1-x0)*(n/xmax);
+  const Y=v=> y1-(y1-y0)*((v-ymin)/(ymax-ymin));
+
+  // 격자
+  ctx.lineWidth=1; ctx.strokeStyle='#EEF1F4'; ctx.fillStyle='#9CA3AF';
+  ctx.font='12px Pretendard,sans-serif'; ctx.textAlign='right'; ctx.textBaseline='middle';
+  for(let v=0.3; v<=0.7001; v+=0.1){
+    const y=Y(v);
+    ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke();
+    ctx.fillText(v.toFixed(1), x0-8, y);
+  }
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  const ticks=[0,0.2,0.4,0.6,0.8,1].map(f=>Math.round(xmax*f));
+  ticks.forEach(t=>{
+    const x=X(t);
+    ctx.beginPath(); ctx.moveTo(x,y0); ctx.lineTo(x,y1); ctx.strokeStyle='#F3F5F7'; ctx.stroke();
+    ctx.fillText(String(t), x, y1+8);
+  });
+  // 축
+  ctx.strokeStyle='#CBD5E1'; ctx.beginPath();
+  ctx.moveTo(x0,y0); ctx.lineTo(x0,y1); ctx.lineTo(x1,y1); ctx.stroke();
+  // 0.5 기준선
+  ctx.save(); ctx.setLineDash([6,5]); ctx.strokeStyle='#94A3B8'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(x0,Y(0.5)); ctx.lineTo(x1,Y(0.5)); ctx.stroke(); ctx.restore();
+  ctx.fillStyle='#64748B'; ctx.textAlign='left'; ctx.textBaseline='bottom';
+  ctx.fillText('0.5', x0+6, Y(0.5)-3);
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x0,y0,x1-x0,y1-y0); ctx.clip();
+  // 전체 흐름(연한 선)
+  if(C.samp.length>1){
+    ctx.strokeStyle='#C7D2FE'; ctx.lineWidth=1.6; ctx.beginPath();
+    C.samp.forEach((p,i)=>{ const x=X(p[0]), y=Y(p[1]); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+    ctx.stroke();
+  }
+  // 교과서 표의 점(진한 꺾은선)
+  const pts=CK.filter(k=>C.snap[k]!==undefined).map(k=>[k, r3(C.snap[k]/k)]);
+  if(pts.length){
+    ctx.strokeStyle='#E11D48'; ctx.lineWidth=2.6; ctx.beginPath();
+    pts.forEach((p,i)=>{ const x=X(p[0]), y=Y(p[1]); i?ctx.lineTo(x,y):ctx.moveTo(x,y); });
+    ctx.stroke();
+    ctx.fillStyle='#E11D48';
+    pts.forEach(p=>{ ctx.beginPath(); ctx.arc(X(p[0]),Y(p[1]),4,0,7); ctx.fill(); });
+  }
+  ctx.restore();
+  ctx.fillStyle='#9CA3AF'; ctx.textAlign='right'; ctx.textBaseline='top';
+  ctx.fillText('(던진 횟수)', x1, y1+26);
+  ctx.textAlign='left';
+  ctx.fillText('(상대도수)', x0-46, 4);
+}
+
+/* ================= 주사위 ================= */
+const PIPS={
+  1:[4], 2:[0,8], 3:[0,4,8], 4:[0,2,6,8], 5:[0,2,4,6,8], 6:[0,2,3,5,6,8]
+};
+const WAYS=[0,0,1,2,3,4,5,6,5,4,3,2,1]; // 합 2~12 (36가지 중)
+let D={n:0,cnt:new Array(13).fill(0),dbl:0,busy:false,last:[1,1]};
+
+function drawDie(el,v){
+  el.innerHTML='';
+  const on=PIPS[v];
+  for(let i=0;i<9;i++){
+    const c=document.createElement('div');
+    if(on.indexOf(i)>=0){ const p=document.createElement('div'); p.className='pip'; c.appendChild(p); }
+    c.style.display='flex'; c.style.alignItems='center'; c.style.justifyContent='center';
+    el.appendChild(c);
+  }
+}
+function diceReset(){
+  D={n:0,cnt:new Array(13).fill(0),dbl:0,busy:false,last:[1,1]};
+  drawDie($('die1'),1); drawDie($('die2'),1);
+  $('sumLine').innerHTML='&nbsp;';
+  dicePaint();
+}
+function diceOne(){
+  const a=1+Math.floor(Math.random()*6), b=1+Math.floor(Math.random()*6);
+  D.n++; D.cnt[a+b]++; if(a===b) D.dbl++;
+  D.last=[a,b];
+  return [a,b];
+}
+function showRoll(a,b){
+  drawDie($('die1'),a); drawDie($('die2'),b);
+  const dbl = a===b ? '<span class="dbl">더블!</span>' : '';
+  $('sumLine').innerHTML =
+    '<span>'+a+'</span><span class="eq">+</span><span>'+b+'</span><span class="eq">=</span><span class="big">'+(a+b)+'</span>'+dbl;
+}
+function diceRun(k){
+  if(D.busy) return;
+  if(k===1){
+    D.busy=true;
+    $('die1').classList.add('roll'); $('die2').classList.add('roll');
+    $('sumLine').innerHTML='&nbsp;';
+    const spin=setInterval(()=>{
+      drawDie($('die1'),1+Math.floor(Math.random()*6));
+      drawDie($('die2'),1+Math.floor(Math.random()*6));
+    },90);
+    setTimeout(()=>{
+      clearInterval(spin);
+      $('die1').classList.remove('roll'); $('die2').classList.remove('roll');
+      const p=diceOne(); showRoll(p[0],p[1]); dicePaint(); D.busy=false;
+    },760);
+    return;
+  }
+  D.busy=true;
+  const DUR=1200, t0=performance.now();
+  let done=0, p=[1,1];
+  const tick=()=>{
+    const el=performance.now()-t0;
+    const want = el>=DUR ? k : Math.max(1, Math.ceil(k*el/DUR));
+    for(; done<want; done++) p=diceOne();
+    showRoll(p[0],p[1]); dicePaint();
+    if(done<k) setTimeout(tick,16); else D.busy=false;
+  };
+  setTimeout(tick,0);
+}
+function dicePaint(){
+  $('dN').textContent=D.n;
+  $('dDbl').textContent=D.dbl;
+  // 화면에 보이는 값(반올림한 상대도수 = 막대 높이)으로 최댓값을 고른다
+  // → "가장 많이 나온 합"과 막대 그림이 어긋나는 일이 생기지 않는다
+  let bs='–';
+  if(D.n>0){
+    let best=-1; const vs=[];
+    for(let s=2;s<=12;s++){ const v=r3(D.cnt[s]/D.n); vs[s]=v; if(v>best) best=v; }
+    const tie=[]; for(let s=2;s<=12;s++) if(vs[s]===best) tie.push(s);
+    bs = tie.length<=2 ? tie.join(', ') : '여럿';
+  }
+  $('dTop').textContent=bs;
+
+  const rows=[['rowS',s=>String(s)],['rowC',s=>String(D.cnt[s])],
+              ['rowD',s=>D.n?f3(D.cnt[s]/D.n):'·'],['rowP',s=>WAYS[s]+'/36']];
+  rows.forEach(([id,fn])=>{
+    const tr=$(id);
+    while(tr.children.length>1) tr.removeChild(tr.lastChild);
+    for(let s=2;s<=12;s++){
+      const td=document.createElement('td');
+      td.textContent=fn(s);
+      if(id==='rowD'){ td.className = D.n? 'rel':'empty'; }
+      if(id==='rowP'){ td.style.color='#6B7280'; }
+      tr.appendChild(td);
+    }
+  });
+  diceChart();
+}
+function diceChart(){
+  const cv=$('cvDice'); if(!cv.clientWidth) return;
+  const {ctx,w,h}=fit(cv);
+  ctx.clearRect(0,0,w,h);
+  const L=46,R=12,T=26,B=26;
+  const x0=L,x1=w-R,y0=T,y1=h-B;
+  // 표시값(반올림한 상대도수)으로 막대 높이를 정한다 → 표와 그림이 절대 어긋나지 않음
+  const vals=[]; let mx=6/36;
+  for(let s=2;s<=12;s++){ const v=D.n? r3(D.cnt[s]/D.n):0; vals[s]=v; if(v>mx) mx=v; }
+  const ymax=Math.ceil(mx/0.05)*0.05;
+  const Y=v=> y1-(y1-y0)*(v/ymax);
+
+  ctx.font='12px Pretendard,sans-serif';
+  ctx.strokeStyle='#EEF1F4'; ctx.fillStyle='#9CA3AF';
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  for(let i=0;i<=4;i++){
+    const v=ymax*i/4, y=Y(v);
+    ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke();
+    ctx.fillText(v.toFixed(2), x0-8, y);
+  }
+  const bw=(x1-x0)/11;
+  for(let s=2;s<=12;s++){
+    const cx=x0+bw*(s-2)+bw/2;
+    const bar=bw*0.62;
+    const v=vals[s];
+    if(v>0){
+      ctx.fillStyle='#93C5FD';
+      ctx.fillRect(cx-bar/2, Y(v), bar, y1-Y(v));
+    }
+    // 이론 확률 표시(점선)
+    const p=WAYS[s]/36, yp=Y(p);
+    ctx.save(); ctx.setLineDash([4,3]); ctx.strokeStyle='#E11D48'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(cx-bar/2-3, yp); ctx.lineTo(cx+bar/2+3, yp); ctx.stroke(); ctx.restore();
+    // 막대 값은 점선 위에 쓰되, 겹쳐도 읽히도록 흰 테두리를 두른다
+    if(v>0 && y1-Y(v)>14){
+      ctx.font='bold 12px Pretendard,sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='bottom';
+      ctx.lineWidth=3.5; ctx.strokeStyle='#fff'; ctx.lineJoin='round';
+      ctx.strokeText(f3(v), cx, Y(v)-3);
+      ctx.fillStyle='#1D4ED8'; ctx.fillText(f3(v), cx, Y(v)-3);
+    }
+    ctx.fillStyle='#374151'; ctx.font='bold 13px Pretendard,sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.fillText(String(s), cx, y1+6);
+  }
+  ctx.strokeStyle='#CBD5E1'; ctx.beginPath();
+  ctx.moveTo(x0,y0); ctx.lineTo(x0,y1); ctx.lineTo(x1,y1); ctx.stroke();
+  ctx.fillStyle='#E11D48'; ctx.font='12px Pretendard,sans-serif';
+  ctx.textAlign='right'; ctx.textBaseline='top';
+  ctx.fillText('- - -  확률(이론값)', x1-2, 4);
+}
+
+/* ================= 시작 ================= */
+function sizeAll(){ coinChart(); diceChart(); }
+window.addEventListener('resize', sizeAll);
+if(window.ResizeObserver){
+  const ro=new ResizeObserver(()=>sizeAll());
+  ro.observe($('cvCoin')); ro.observe($('cvDice'));
+}
+document.addEventListener('gesturestart', e=>e.preventDefault());
+coinReset(); diceReset();
+requestAnimationFrame(sizeAll);
+setTimeout(sizeAll,120);
+</script>
+</body>
+</html>
